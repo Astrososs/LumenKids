@@ -1,7 +1,7 @@
 // The "Session" Object (Looking at the history list)
 
 export const aiModel =
-{
+[{
   "sessionId":"chat_session_888",
   "userId": "user_abc123",        // Matches Omar's User
   "relatedMissionId": "mission_math_01", // Matches Ritwan's Mission (Optional)
@@ -21,4 +21,16 @@ export const aiModel =
       "timestamp": "2024-03-10T14:30:10Z"
     }
   ]
-}
+}];
+
+export const  sendMessageToAi = async (question, age, context) => {
+
+
+};
+
+
+export const saveChatSession = (newMessages) => {
+
+
+  
+};

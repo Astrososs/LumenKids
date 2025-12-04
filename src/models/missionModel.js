@@ -9,7 +9,8 @@ topic_name:"Addition_1",
 difficulty:1,
 total_tasks:5,
 xp_rewards:5,
-total_stars:1
+total_stars:1,
+badge:"badge_math_novice"
 
 }
 ,"math_2":{

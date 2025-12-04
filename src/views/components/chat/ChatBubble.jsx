@@ -5,7 +5,7 @@ const ChatBubble = ({ message }) => {
   const isUser = message.role === 'user';
 
  
-  const bubbleColor = isUser 
+  const bubbleColor = isUser   
     ? "bg-blue-500 text-white rounded-br-none" 
     : "bg-gray-100 text-gray-800 rounded-bl-none";
 

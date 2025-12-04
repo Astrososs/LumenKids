@@ -3,6 +3,8 @@ const Mock_Missions ={
 // mission_type: perma_missons && timed_mission && custom_missions
 // just create the missions no user data will be stored here
 
+
+//add id
 math_missions:{
 "math_1":{
 topic_name:"Addition_1",
@@ -86,6 +88,7 @@ total_stars:3
 
 }
 }
+
 }
 
 //Creates a list of all the main objects in Mock_Missions. So when we scale it will still work.
@@ -129,6 +132,7 @@ for (var mission of missions) {
 }
 
 export function getAllMissons(){
+
    var folders = dynamicMission();
    var allMissionsList = [];
 

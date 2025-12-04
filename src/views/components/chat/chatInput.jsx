@@ -1,23 +1,23 @@
 import React, { useState } from 'react';
-// Import the custom button you built earlier!
+
 import IconButton from './src/components/common/IconButton';
 
 const ChatInput = ({ onSend, disabled }) => {
-  // 1. Local State: Tracks what the user is typing right now
+  
   const [text, setText] = useState("");
 
-  // 2. Logic: Handle the submit
+  
   const handleSubmit = (e) => {
-    e.preventDefault(); // Stop the browser from reloading the page
+    e.preventDefault(); 
     
-    // Only send if there is text AND we aren't waiting for the AI
+  
     if (text.trim() && !disabled) {
       onSend(text);
-      setText(""); // Clear the input box
+      setText(""); 
     }
   };
 
-  // The "Paper Airplane" Icon for the button
+ 
   const sendIcon = (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
       <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
@@ -31,7 +31,7 @@ const ChatInput = ({ onSend, disabled }) => {
         className="flex items-center gap-2"
       >
         
-        {/* The Text Field */}
+        
         <input
           type="text"
           value={text}
@@ -43,7 +43,7 @@ const ChatInput = ({ onSend, disabled }) => {
           `}
         />
 
-        {/* Your Custom Button Component! */}
+        
         <IconButton 
           icon={sendIcon}
           onClick={() => {}} // Form handles submit, so we can leave this empty or pass null

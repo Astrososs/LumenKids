@@ -46,7 +46,7 @@ export function createUser(userId, email, nickname, age) {
         createdAt: new Date().toISOString(),
         settings: {
             theme: "light",
-            avatarId: "robot_blue_v1",
+            avatarId: "default",
             language: "en-US",
             soundEnabled: true
         },

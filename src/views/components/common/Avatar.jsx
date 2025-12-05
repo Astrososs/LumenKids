@@ -1,5 +1,3 @@
-import React from 'react';
-
 const AVATARS = {
     "robot_blue_v1": "https://api.dicebear.com/9.x/bottts/svg?seed=Lumen1",
     "robot_pink_v1": "https://api.dicebear.com/9.x/bottts/svg?seed=Lumen2",

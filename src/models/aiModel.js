@@ -64,7 +64,7 @@ export const saveChatSession = (newMessages) => {
 const newchat = {
   "sessionId":Date.now(),
   "userId": "user_abc123",       
-  "relatedMissionId": "mission_math_01", // Matches Ritwan's Mission (Optional)
+  "relatedMissionId": "mission_math_01", 
   "topic": "Volcanoes",
   "startTime": new Date().toISOString(),
   

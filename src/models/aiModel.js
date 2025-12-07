@@ -1,10 +1,10 @@
-// The "Session" Object (Looking at the history list)
+
 
 export const mockChatHistory =
 [{
   "sessionId":"chat_session_888",
-  "userId": "user_abc123",        // Matches Omar's User
-  "relatedMissionId": "mission_math_01", // Matches Ritwan's Mission (Optional)
+  "userId": "user_abc123",        
+  "relatedMissionId": "mission_math_01", 
   "topic": "Volcanoes",
   "startTime": "2024-03-10T14:30:00Z",
   

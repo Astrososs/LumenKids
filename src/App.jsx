@@ -31,7 +31,7 @@ function App() {
               
               <Route path="/" element={
                 <RequireAuth>
-                  <DashboardPresenter />
+                  <ChatPresenter />
                 </RequireAuth>
               } />
               

@@ -1,96 +1,57 @@
-const apiKey= import.meta.env.VITE_AI_API_KEY;
+const apiKey = import.meta.env.VITE_AI_API_KEY;
+console.log("DEBUG: The key is", apiKey);
 
+export const sendMessageToAi = async (question, age, context = []) => {
 
-export const mockChatHistory =
-[{
-  "sessionId":"chat_session_888",
-  "userId": "user_abc123",        
-  "relatedMissionId": "mission_math_01", 
-  "topic": "Volcanoes",
-  "startTime": "2024-03-10T14:30:00Z",
-  
-  "messages": [
-    {
-      "role": "user",
-      "text": "Why is lava hot?",
-      "timestamp": "2024-03-10T14:30:05Z"
-    },
-    {
-      "role": "assistant",
-      "text": "Lava is hot because it comes from deep inside the Earth where it is very squeezed!",
-      "timestamp": "2024-03-10T14:30:10Z"
-    }
-  ]
-}];
+  // 1. FIX: Format history for Gemini (Strict Requirement!)
+  // Gemini requires "parts", NOT "content".
+  // Gemini requires "model", NOT "assistant".
+  const previousMessages = context.map(msg => ({
+    role: msg.role === "assistant" ? "model" : "user",
+    parts: [{ text: msg.text }]
+  }));
 
+  try {
+    // 2. FIX: Use Backticks (`) here, NOT quotes (")
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, 
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          contents: [
+            // Insert the corrected history
+            ...previousMessages,
+            // Insert the new question
+            {
+              role: "user",
+              parts: [{ 
+                text: `You are a helpful tutor for a ${age}-year-old child. ${question}` 
+              }]
+            }
+          ]
+        })
+      }
+    );
 
-
-
-
-export const  sendMessageToAi = async (question, age, context =[]) => {
-
-
-if(!apiKey){
-console.warn("No API Key found for AI service. Using mock response.");
-return new Promise((resolve) =>{
-setTimeout(() => {
-resolve({role: "assistamt",
-  text: "This is a mock response. .",
-  timestamp: new Date().toISOString()
-});
-
-
-
-}, 1500);
-});
-}
-
-
-const previousMessages = context.map(msg=> ({
-
-role: msg.role,
-content: msg.text
-
-}));
-
-
-
-try{
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json", 
-      "Authorization": `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-  model: "gpt-3.5-turbo",
-  messages: [{
-    role: "system", content: `You are a helpful tutor for a ${age}-year-old child.`},
-  
-  
-  ...previousMessages,
-  
-    {role: "user", content: question}
-  ]
-  })
-});
-
-if (!response.ok) {
+    if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error("OpenAI API Error:", errorData);
-      throw new Error(`AI service responded with status: ${response.status}`);
+      console.error("Gemini API Error:", errorData);
+      throw new Error(`Gemini responded with status: ${response.status}`);
     }
-
-
 
     const data = await response.json();
 
-    return ({
-      role: "assistant",
-      text: data.choices[0].message.content,
-      timestamp: new Date().toISOString()
-    });
+    // 3. FIX: Parse Gemini's specific response structure
+    const aiResponseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't understand that.";
 
+    return {
+      role: "assistant", // Keep 'assistant' for your UI to display it correctly
+      text: aiResponseText,
+      timestamp: new Date().toISOString()
+    };
 
   } catch (error) {
     console.error("Error communicating with AI service:", error);

@@ -8,7 +8,6 @@ export const mockChatHistory =
   "topic": "Volcanoes",
   "startTime": "2024-03-10T14:30:00Z",
   
-  // The actual conversation
   "messages": [
     {
       "role": "user",
@@ -23,57 +22,66 @@ export const mockChatHistory =
   ]
 }];
 
+const apiKey= import.meta.env.VITE_AI_API_KEY;
 export const  sendMessageToAi = async (question, age, context) => {
 
 
-return new Promise((resolve) => {
-
+if(!apiKey){
+console.warn("No API Key found for AI service. Using mock response.");
+return new Promise((resolve) =>{
 setTimeout(() => {
+resolve({role: "assistamt",
+  text: "This is a mock response. .",
+  timestamp: new Date().toISOString()
+});
 
-const text = question.toLowerCase();
-let answerText = "";
-if( text.includes("math") || text.includes("numbers")){
 
-  answerText = "Math is like a puzzle! Did you know 0 is the only number that can't be represented by Roman numerals?";
-}
 
-else if(text.includes("space") || text.includes("planet")){
+}, 1500);
 
-  answerText = "Space is huge! The sun is actually a star, just like the tiny dots you see at night.";
-}
 
-else if(text.includes("joke")){
-  answerText = "Why did the computer go to the doctor? Because it had a virus! 🤖";
-}
-else{
-answerText = "That is a very interesting question! Let's explore that topic together.";
-}
 
-resolve({role: "assistant",                                               
-        text: answerText,
-        timestamp: new Date().toISOString()});
-
-}, 2000);
 
 });
 
-};
 
-export const saveChatSession = (newMessages) => {
-
-const newchat = {
-  "sessionId":Date.now(),
-  "userId": "user_abc123",       
-  "relatedMissionId": "mission_math_01", 
-  "topic": "Volcanoes",
-  "startTime": new Date().toISOString(),
-  
-  
-  "messages":  newMessages  
-  
 }
 
-mockChatHistory.push(newchat);
-return true;
-  
+
+
+try{
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json", 
+      "Authorization": `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+  model: "gpt-3.5-turbo",
+  messages: [{
+    role: "system", content: `You are a helpful tutor for a ${age}-year-old child.`},
+  {role: "user", content: question}
+  ]
+  })
+});
+
+if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error("OpenAI API Error:", errorData);
+      throw new Error(`AI service responded with status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    return {
+      role: "assistant",
+      text: data.choices[0].message.content,
+      timestamp: new Date().toISOString()
+    };
+
+
+  } catch (error) {
+    console.error("Error communicating with AI service:", error);
+    throw error;
+  }
 };

@@ -22,7 +22,7 @@ const chatSlice = createSlice({
 name:'chat',
 initialState:{
     messages:[],
-    isloading:false,
+    isLoading:false,
     error: null
 },
 reducers:{

@@ -1,3 +1,4 @@
+const apiKey= import.meta.env.VITE_AI_API_KEY;
 
 
 export const mockChatHistory =
@@ -22,8 +23,11 @@ export const mockChatHistory =
   ]
 }];
 
-const apiKey= import.meta.env.VITE_AI_API_KEY;
-export const  sendMessageToAi = async (question, age, context) => {
+
+
+
+
+export const  sendMessageToAi = async (question, age, context =[]) => {
 
 
 if(!apiKey){
@@ -38,14 +42,16 @@ resolve({role: "assistamt",
 
 
 }, 1500);
-
-
-
-
 });
-
-
 }
+
+
+const previousMessages = context.map(msg=> ({
+
+role: msg.role,
+content: msg.text
+
+}));
 
 
 
@@ -60,7 +66,11 @@ try{
   model: "gpt-3.5-turbo",
   messages: [{
     role: "system", content: `You are a helpful tutor for a ${age}-year-old child.`},
-  {role: "user", content: question}
+  
+  
+  ...previousMessages,
+  
+    {role: "user", content: question}
   ]
   })
 });
@@ -71,13 +81,15 @@ if (!response.ok) {
       throw new Error(`AI service responded with status: ${response.status}`);
     }
 
+
+
     const data = await response.json();
 
-    return {
+    return ({
       role: "assistant",
       text: data.choices[0].message.content,
       timestamp: new Date().toISOString()
-    };
+    });
 
 
   } catch (error) {

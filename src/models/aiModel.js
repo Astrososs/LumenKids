@@ -1,60 +1,40 @@
-const apiKey = import.meta.env.VITE_AI_API_KEY;
-console.log("DEBUG: The key is", apiKey);
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const genAI = new GoogleGenerativeAI(import.meta.env.VITE_AI_API_KEY);
 
 export const sendMessageToAi = async (question, age, context = []) => {
-
-  // 1. FIX: Format history for Gemini (Strict Requirement!)
-  // Gemini requires "parts", NOT "content".
-  // Gemini requires "model", NOT "assistant".
-  const previousMessages = context.map(msg => ({
-    role: msg.role === "assistant" ? "model" : "user",
-    parts: [{ text: msg.text }]
-  }));
-
   try {
-    // 2. FIX: Use Backticks (`) here, NOT quotes (")
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, 
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          contents: [
-            // Insert the corrected history
-            ...previousMessages,
-            // Insert the new question
-            {
-              role: "user",
-              parts: [{ 
-                text: `You are a helpful tutor for a ${age}-year-old child. ${question}` 
-              }]
-            }
-          ]
-        })
-      }
-    );
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const history = context.map(msg => ({
+      role: msg.role === "assistant" ? "model" : "user",
+      parts: [{ text: msg.text }]
+    }));
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error("Gemini API Error:", errorData);
-      throw new Error(`Gemini responded with status: ${response.status}`);
-    }
+    const chat = model.startChat({
+      history: history,
+      generationConfig: { maxOutputTokens: 200 },
+    });
 
-    const data = await response.json();
-
-    // 3. FIX: Parse Gemini's specific response structure
-    const aiResponseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't understand that.";
+    const result = await chat.sendMessage(`(Explain to a ${age} year old): ${question}`);
+    const response = await result.response;
+    const text = response.text();
 
     return {
-      role: "assistant", // Keep 'assistant' for your UI to display it correctly
-      text: aiResponseText,
+      role: "assistant",
+      text: text,
       timestamp: new Date().toISOString()
     };
 
   } catch (error) {
-    console.error("Error communicating with AI service:", error);
-    throw error;
+    console.warn("⚠️ API Error. Switching to Backup Mode.", error);
+
+    
+    await new Promise(r => setTimeout(r, 1000));
+
+    return {
+      role: "assistant",
+      text: "I'm having trouble reaching my brain servers right now, but that is a fascinating question! Ideally, I would explain it using simple words and fun examples. (Offline Backup Mode)",
+      timestamp: new Date().toISOString()
+    };
   }
 };

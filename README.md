@@ -17,11 +17,11 @@ Lumen Kids is an interactive "study buddy" application designed for children. It
 * **AI Integration:** Installed `genai` and implemented the initial connection to the AI API to generate answers and explanations.
 * **App Layout & Views:** Created the main UI structure based on the Lumen Kids design, including:
     * **Dashboard:** Displays the "New Explorer" greeting, current level, and daily streaks.
-    * **Missions:** Lists active tasks (e.g., "Loop de Loop") and completed missions.
     * **AI Chat:** Functional chat interface where kids can ask questions like "What is a loop?" and receive simplified answers.
     * **Stats/Profile:** Visualizes "Skill Analysis" (Loops, Syntax, Logic) and tracks XP.
 
 ### 🚧 What we still plan to do
+ * **Missions:** Lists active tasks (e.g., "Loop de Loop") and completed missions.
 * **Refine AI Prompts:** Further tune the AI to provide more age-specific analogies and mini-stories based on the child's profile.
 * **User Settings:** Finalize the settings for UI language and dark/light mode preferences.
 * **Advanced Progress Tracking:** Implement the logic to pinpoint specific weaknesses based on mission performance.
@@ -38,7 +38,7 @@ Lumen Kids is an interactive "study buddy" application designed for children. It
 ├── src/                   # Main application source code
 │   ├── components/        # Reusable UI components 
 │   ├── pages/             # Main views: Dashboard, Missions, Chat, Profile
-│   ├── redux/             # Redux slices for state management
+│   ├── store/             # Redux slices for state management
 │   ├── App.jsx            # Main app component and routing
 │   └── main.jsx           # Entry point
 ├── .firebaserc            # Firebase project aliases

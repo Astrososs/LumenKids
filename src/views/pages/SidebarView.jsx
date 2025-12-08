@@ -62,7 +62,7 @@ const SidebarView = ({ user, isAuthenticated, onLogout, onNavigate, navItems }) 
 
       <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-gray-900 flex items-center justify-between px-4 z-50 border-b border-gray-700">
         <button onClick={() => setIsOpen(true)} className="text-white text-2xl">☰</button>
-        <span className="text-white font-bold text-lg" onClick={() => onNavigate('/')}>TechTots 🚀</span>
+        <span className="text-white font-bold text-lg" onClick={() => onNavigate('/')}>LumenKids 🚀</span>
 
 
         <button 

@@ -1,10 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 
-import SidebarPresenter from './presenters/SidebarPresenter'; 
+import SidebarPresenter from './presenters/SidebarPresenter';
 import DashboardPresenter from './presenters/DashboardPresenter';
 import ChatPresenter from './presenters/ChatPresenter';
 import LoginPresenter from './presenters/LoginPresenter';
+import CoursesPresenter from './presenters/CoursesPresenter';
+import SubjectPresenter from './presenters/SubjectPresenter';
+import MissionPresenter from './presenters/MissionPresenter';
 
 
 const RequireAuth = ({ children }) => {
@@ -17,31 +20,50 @@ function App() {
   const { isAuthenticated } = useSelector((state) => state.user);
 
 
-  const layoutClasses = isAuthenticated 
-    ? "flex-1 min-h-screen transition-all duration-300 pt-16 md:pt-0 md:ml-20" 
-    : "flex-1 min-h-screen w-full"; 
+  const layoutClasses = isAuthenticated
+    ? "flex-1 min-h-screen transition-all duration-300 pt-16 md:pt-0 md:ml-20"
+    : "flex-1 min-h-screen w-full";
 
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-gray-900 text-white font-sans flex flex-col md:flex-row">
-        
+
         <SidebarPresenter />
 
         <main className={layoutClasses}>
 
-          <div className="w-full h-full"> 
+          <div className="w-full h-full">
             <Routes>
               <Route path="/login" element={<LoginPresenter />} />
-              
+
               <Route path="/" element={
                 <RequireAuth>
                   <DashboardPresenter />
                 </RequireAuth>
               } />
-              
+
               <Route path="/chat" element={
                 <RequireAuth>
                   <ChatPresenter />
+                </RequireAuth>
+              } />
+
+
+              <Route path="/courses" element={
+                <RequireAuth>
+                  <CoursesPresenter />
+                </RequireAuth>
+              } />
+
+              <Route path="/courses/:subjectId" element={
+                <RequireAuth>
+                  <SubjectPresenter />
+                </RequireAuth>
+              } />
+
+              <Route path="/mission/:missionId" element={
+                <RequireAuth>
+                  <MissionPresenter />
                 </RequireAuth>
               } />
 

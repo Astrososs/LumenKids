@@ -1,180 +1,95 @@
-const Mock_User_Data = {
-    uid: "user_abc123",
-    nickname: "John Doe",
-    email: "john@example.com",
-    age: 12,
-    createdAt: "2024-01-01T10:00:00Z",
 
-    settings: {
-        theme: "light",
-        avatarId: "robot_blue_v1",
-        language: "en-US",
-        soundEnabled: true
-    },
+import { auth, db } from "../firebase/firebaseConfig";
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut 
+} from "firebase/auth";
+import { 
+  doc, 
+  getDoc, 
+  setDoc, 
+  updateDoc 
+} from "firebase/firestore";
 
-    stats: {
-        xp: 150,
-        currentLevel: 2,
-        totalStars: 15,
-        streakDays: 3
-    },
 
-    badges: [
-        { id: "math_wizard", earnedAt: "2024-02-01T10:00:00Z" },
-        { id: "first_login", earnedAt: "2024-01-01T10:00:00Z" }
-    ],
-    progress: {
-        "mission_math_01": {
-            status: "completed",
-            stars: 3,
-            lastPlayed: "2024-02-10"
-        },
-        "mission_science_04": {
-            status: "in_progress",
-            stars: 0,
-            lastPlayed: "2024-02-12"
-        }
-    }
+export const loginUser = async (email, password) => {
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const uid = userCredential.user.uid;
+    
+   
+    const userProfile = await getUserProfile(uid);
+    return { success: true, user: userProfile };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 };
 
-export function createUser(userId, email, nickname, age) {
-    const newProfile = {
-        uid: userId,
-        nickname: nickname,
-        email: email,
-        age: age,
-        createdAt: new Date().toISOString(),
-        settings: {
-            theme: "light",
-            avatarId: "default",
-            language: "en-US",
-            soundEnabled: true
-        },
-        stats: {
-            xp: 0,
-            currentLevel: 1,
-            totalStars: 0,
-            streakDays: 0
-        },
-        badges: [],
-        progress: {},
+
+export const registerUser = async (email, password, nickname) => {
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const uid = userCredential.user.uid;
+
+  
+    const newUserProfile = {
+      uid: uid,
+      nickname: nickname || "New Explorer",
+      email: email,
+      createdAt: new Date().toISOString(),
+      settings: {
+        avatarId: "robot_blue_v1", 
+        theme: "light"
+      },
+      stats: {
+        xp: 0,
+        currentLevel: 1,
+        streakDays: 0,
+        totalStars: 0
+      },
+      progress: {} 
+    };
+
+    await setDoc(doc(db, "users", uid), newUserProfile);
+
+    return { success: true, user: newUserProfile };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+export const logoutUser = async () => {
+  try {
+    await signOut(auth);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+export const getUserProfile = async (uid) => {
+  try {
+    const docRef = doc(db, "users", uid);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      return docSnap.data();
+    } else {
+      console.error("No such user document!");
+      return null;
     }
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    return null;
+  }
+};
 
-    console.log("[Model] Creating new user in DB...");
-
-
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve(newProfile);
-        }, 1000);
-    });
-}
-
-export function getUserProfile(userId) {
-
-    console.log(`[Model] Searching for user: ${userId}...`);
-
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            if (userId == Mock_User_Data.uid) {
-                resolve(Mock_User_Data) 
-            } else {
-                resolve(null)
-            }
-        }, 1000)
-    })
-}
-
-
-export function validateUser(userId){
-
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            if (userId == Mock_User_Data.uid) {
-                resolve(true)
-            } else {
-                resolve(false)
-            }
-        },500)
-    })
-}
-
-export const updateUserSettings = async(userId,settingKey,newValue) => {
-
-
-    const Valid = await validateUser(userId);
-
-    if(!Valid) {
-        console.log("user not found")
-        return false
-    }
-
-    return new Promise((resolve) => {
-        setTimeout(() => {
-
-        console.log(`[Model] Updating ${settingKey} to ${newValue}...`);
-            
-      
-        Mock_User_Data.settings[settingKey] = newValue
-        resolve(true)
-        },1000)
-    })
-}
-
-export const addExperience = async(userId,xpAmount) =>{
-
-const Valid = await validateUser(userId)
-
-if(!Valid) {
-    return {success: false, leveledUp: false}
-}
-
-
-return new Promise((resolve) =>{
-    setTimeout(() => {
-        let leveledUp = false
-        let currentXp = Mock_User_Data.stats.xp
-        currentXp = currentXp + xpAmount
-
-        if(currentXp >= 100){
-           currentXp = currentXp - 100
-           Mock_User_Data.stats.currentLevel += 1
-           leveledUp = true
-        } 
-
-
-        Mock_User_Data.stats.xp = currentXp
-
-        resolve({ 
-                success: true, 
-                leveledUp: leveledUp 
-            });
-
-
-    }, 1000);
-})
-}
-
-
-
-export const saveMissionProgress = async(userId, missionId, resultData) => {
-    const Valid = await validateUser(userId)
-
-    if(!Valid){
-        return {
-            success: false
-        }
-    }
-    
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            
-
-            Mock_User_Data.progress[missionId] = resultData
-
-            resolve({
-                success: true
-            })
-        }, 1000);
-    })
-}
+export const updateUserInDb = async (uid, dataToUpdate) => {
+  try {
+    const userRef = doc(db, "users", uid);
+    await updateDoc(userRef, dataToUpdate);
+  } catch (error) {
+    console.error("Error updating DB:", error);
+  }
+};

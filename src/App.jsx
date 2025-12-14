@@ -1,13 +1,21 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { onAuthStateChanged } from 'firebase/auth'; 
 
-import SidebarPresenter from './presenters/SidebarPresenter';
+
+import { auth } from './firebase/firebaseConfig'; 
+import { getUserProfile } from './models/userModel'; 
+import { loginSuccess, logout } from './store/slices/userSlice'; 
+
+
+import SidebarPresenter from './presenters/SidebarPresenter'; 
 import DashboardPresenter from './presenters/DashboardPresenter';
 import ChatPresenter from './presenters/ChatPresenter';
 import LoginPresenter from './presenters/LoginPresenter';
-import CoursesPresenter from './presenters/CoursesPresenter';
-import SubjectPresenter from './presenters/SubjectPresenter';
-import MissionPresenter from './presenters/MissionPresenter';
+import CoursesPresenter from './presenters/CoursesPresenter'; 
+import SubjectPresenter from './presenters/SubjectPresenter'; 
+import MissionPresenter from './presenters/MissionPresenter'; 
 
 
 const RequireAuth = ({ children }) => {
@@ -17,23 +25,45 @@ const RequireAuth = ({ children }) => {
 };
 
 function App() {
+  const dispatch = useDispatch();
   const { isAuthenticated } = useSelector((state) => state.user);
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
 
-  const layoutClasses = isAuthenticated
-    ? "flex-1 min-h-screen transition-all duration-300 pt-16 md:pt-0 md:ml-20"
-    : "flex-1 min-h-screen w-full";
+        const userProfile = await getUserProfile(currentUser.uid);
+        
+        if (userProfile) {
+            dispatch(loginSuccess(userProfile));
+        }
+      } else {
+
+        dispatch(logout());
+      }
+    });
+
+
+    return () => unsubscribe();
+  }, [dispatch]);
+
+
+  const layoutClasses = isAuthenticated 
+    ? "flex-1 min-h-screen transition-all duration-300 pt-16 md:pt-0 md:ml-20" 
+    : "flex-1 min-h-screen w-full"; 
 
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-gray-900 text-white font-sans flex flex-col md:flex-row">
+        
 
         <SidebarPresenter />
 
         <main className={layoutClasses}>
-
-          <div className="w-full h-full">
+          <div className="w-full h-full"> 
             <Routes>
+              
+              {/* Public Route */}
               <Route path="/login" element={<LoginPresenter />} />
 
               <Route path="/" element={
@@ -41,13 +71,12 @@ function App() {
                   <DashboardPresenter />
                 </RequireAuth>
               } />
-
+              
               <Route path="/chat" element={
                 <RequireAuth>
                   <ChatPresenter />
                 </RequireAuth>
               } />
-
 
               <Route path="/courses" element={
                 <RequireAuth>
@@ -67,7 +96,9 @@ function App() {
                 </RequireAuth>
               } />
 
-              <Route path="*" element={<LoginPresenter />} />
+
+              <Route path="*" element={<Navigate to="/login" replace />} />
+              
             </Routes>
           </div>
         </main>

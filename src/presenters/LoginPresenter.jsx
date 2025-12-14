@@ -1,34 +1,58 @@
+import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { loginStart, loginSuccess } from '../store/slices/userSlice'; 
-
-
+import { loginStart, loginSuccess, loginFailure } from '../store/slices/userSlice'; 
+import { loginUser, registerUser } from '../models/userModel';
 import LoginView from '../views/pages/LoginView';
 
 export default function LoginPresenter() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading } = useSelector((state) => state.user);
+  const { loading, error } = useSelector((state) => state.user);
+  
 
-  const handleLogin = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [nickname, setNickname] = useState("");
+  const [isRegistering, setIsRegistering] = useState(false); 
+
+  const handleAuth = async () => {
+
+    if (!email || !password) {
+        alert("Please enter email and password");
+        return;
+    }
+
     dispatch(loginStart());
 
+    let result;
 
-    setTimeout(() => {
-      const mockUser = {
-        uid: "user_abc123",
-        nickname: "Space Cadet",
-        email: "cadet@techtots.com",
-        settings: { avatarId: "robot_blue_v1" },
-        stats: { currentLevel: 5, xp: 75, totalStars: 12, streakDays: 3 },
-        progress: {}
-      };
 
-      dispatch(loginSuccess(mockUser));
-      navigate('/'); 
-    }, 800);
+    if (isRegistering) {
+        result = await registerUser(email, password, nickname);
+    } else {
+        result = await loginUser(email, password);
+    }
+
+
+    
+    if (result.success) {
+        dispatch(loginSuccess(result.user));
+        navigate('/'); 
+    } else {
+        dispatch(loginFailure(result.error));
+    }
   };
 
-
-  return <LoginView onLogin={handleLogin} isLoading={loading} />;
+  return (
+    <LoginView 
+        email={email} setEmail={setEmail}
+        password={password} setPassword={setPassword}
+        nickname={nickname} setNickname={setNickname}
+        isRegistering={isRegistering} setIsRegistering={setIsRegistering}
+        onAuth={handleAuth} 
+        isLoading={loading}
+        error={error}
+    />
+  );
 }

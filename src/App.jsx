@@ -63,7 +63,7 @@ function App() {
           <div className="w-full h-full"> 
             <Routes>
               
-              {/* Public Route */}
+
               <Route path="/login" element={<LoginPresenter />} />
 
               <Route path="/" element={

@@ -1,45 +1,40 @@
 import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { logout } from '../store/slices/userSlice'; 
+import { useNavigate, useLocation } from 'react-router-dom';
+import { logout } from '../store/slices/userSlice';
+import { logoutUser } from '../models/userModel';
 import SidebarView from '../views/pages/SidebarView';
 
 export default function SidebarPresenter() {
-  const navigate = useNavigate();
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  const { isAuthenticated } = useSelector((state) => state.user);
 
 
-  const { isAuthenticated, data: user } = useSelector((state) => state.user);
+  const navItems = [
+    { label: "Dashboard", path: "/", icon: "🏠" },
+    { label: "Courses", path: "/courses", icon: "📚" },
+    { label: "AI Buddy", path: "/chat", icon: "🤖" },
+  ];
 
-
-  if (!isAuthenticated) {
-    return null; 
+  if (!isAuthenticated || location.pathname === '/login') {
+    return null;
   }
 
 
-  const handleLogout = () => {
-    if (window.confirm("Are you sure you want to log out?")) {
-      dispatch(logout());
-      navigate('/login');
-    }
+  const handleLogout = async () => {
+    await logoutUser();
+    dispatch(logout());
+    navigate('/login');
   };
-
-  const handleNavigate = (path) => {
-    navigate(path);
-  };
-
-  const navItems = [
-    { name: "Dashboard", path: "/", icon: "🏠" },
-    { name: "Courses", path: "/courses", icon: "📚" },
-    { name: "AI Buddy", path: "/chat", icon: "🤖" },
-  ];
 
   return (
     <SidebarView 
-        user={user}
-        isAuthenticated={isAuthenticated}
-        onLogout={handleLogout}
-        onNavigate={handleNavigate}
-        navItems={navItems}
+      currentPath={location.pathname}
+      navItems={navItems}
+      onNavigate={(path) => navigate(path)}
+      onLogout={handleLogout}
     />
   );
 }

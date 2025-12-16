@@ -1,147 +1,176 @@
-import ReactMarkdown from 'react-markdown'; 
-import ProgressBar from '../components/common/ProgressBar'; 
-import Button from '../components/common/Button';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const MissionView = ({ 
-  mission, nextMissionId, 
-  currentTask, totalTasks, currentIndex, 
-  selectedOption, onSelectOption, isCorrect, 
-  onCheck, onNext, onTheoryDone, 
-  isFinished, score, onExit 
+  mission, nextMissionId,
+  currentTask, totalTasks, currentIndex,
+  selectedOption, onSelectOption,
+  isCorrect, onCheck, onNext, onTheoryDone,
+  
+  onAskLumen, aiHelp, isAiLoading,
+  
+  isFinished, score, onExit
 }) => {
-  const navigate = useNavigate();
-  const isExam = mission.type === 'exam';
-
- 
-  if (mission.type === 'theory') {
-    return (
-      <div className="max-w-2xl mx-auto p-6 min-h-screen flex flex-col items-center justify-center animate-fade-in-up">
-        <div className="bg-gray-800 p-8 rounded-3xl border border-gray-700 shadow-2xl w-full">
-            <div className="flex items-center gap-3 mb-6 border-b border-gray-700 pb-4">
-                <span className="text-4xl">📖</span>
-                <h1 className="text-2xl font-bold text-white">{mission.title}</h1>
-            </div>
-            
-           
-            <div className="prose prose-invert prose-lg text-gray-300 mb-8">
-                <ReactMarkdown>{mission.content}</ReactMarkdown>
-            </div>
-
-            <Button 
-                label={nextMissionId ? "I Understand! Next Mission →" : "Finish Unit"} 
-                onClick={onTheoryDone} 
-                variant="primary" 
-            />
-        </div>
-      </div>
-    );
-  }
-
 
   if (isFinished) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[80vh] text-center p-6 animate-fade-in-up">
-        <div className="text-8xl mb-4 animate-bounce">
-            {isExam ? '🎓' : '🏆'}
-        </div>
-        <h1 className="text-4xl font-bold text-white mb-2">
-            {isExam ? 'Exam Passed!' : 'Mission Complete!'}
-        </h1>
-        <p className="text-gray-400 text-xl mb-8">You earned +{mission.xpReward} XP</p>
-        
-        <div className="text-5xl font-bold text-blue-400 mb-8">
-            {score} / {totalTasks}
-        </div>
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+        <div className="bg-gray-800 rounded-3xl p-8 max-w-md w-full text-center border border-gray-700 shadow-2xl">
+          <div className="text-6xl mb-4 animate-bounce">🏆</div>
+          <h2 className="text-3xl font-bold text-white mb-2">Mission Complete!</h2>
+          <p className="text-gray-400 mb-6">You earned +{mission.xpReward} XP</p>
+          
+          <div className="bg-gray-900 rounded-xl p-4 mb-8">
+            <div className="text-sm text-gray-500 uppercase font-bold">Your Score</div>
+            <div className="text-4xl font-bold text-blue-400">{score} / {totalTasks}</div>
+          </div>
 
-        <div className="flex gap-4">
-            <Button label="Back to Map" onClick={onExit} variant="secondary" />
-            
-           
-            {nextMissionId && (
-                <Button 
-                    label="Next Level →" 
-                    onClick={() => navigate(`/mission/${nextMissionId}`)} 
-                    variant="primary" 
-                />
-            )}
+          <div className="space-y-3">
+             {nextMissionId ? (
+                <Link to={`/mission/${nextMissionId}`} className="block w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl transition">
+                    Next Level 🚀
+                </Link>
+             ) : (
+                <div className="text-green-400 font-bold mb-2">Unit Complete!</div>
+             )}
+             
+             <button 
+                onClick={onExit}
+                className="block w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-xl transition"
+             >
+               Back to Menu
+             </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  
+  const progressPercent = ((currentIndex + 1) / totalTasks) * 100;
+
   return (
-    <div className={`max-w-3xl mx-auto p-6 min-h-screen flex flex-col ${isExam ? 'border-4 border-red-900/30 rounded-xl' : ''}`}>
+    <div className="min-h-screen bg-gray-900 text-white flex flex-col">
       
-     
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-4">
-            <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${isExam ? 'bg-red-600 text-white' : 'bg-blue-900 text-blue-200'}`}>
-                {isExam ? 'FINAL EXAM 🛑' : 'PRACTICE'}
+      <div className="h-16 flex items-center px-4 bg-gray-800 justify-between">
+        <button onClick={onExit} className="text-gray-400 hover:text-white">✕ Exit</button>
+        <div className="font-bold text-lg">{mission.title}</div>
+        <div className="w-16"></div> 
+      </div>
+
+      <div className="h-2 bg-gray-700 w-full">
+        <div 
+            className="h-full bg-blue-500 transition-all duration-500"
+            style={{ width: `${progressPercent}%` }}
+        ></div>
+      </div>
+
+      <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-3xl mx-auto w-full">
+        
+        <div className="bg-gray-800 rounded-3xl p-8 shadow-2xl w-full border border-gray-700 relative">
+
+          <div className="mb-8">
+            <span className="bg-blue-900 text-blue-200 text-xs font-bold px-2 py-1 rounded mb-4 inline-block">
+                {currentTask.type === 'theory' ? 'LEARN' : `QUESTION ${currentIndex + 1}`}
             </span>
-            <button onClick={onExit} className="text-gray-500 hover:text-white">✕ Quit</button>
-        </div>
-       
-        <ProgressBar value={currentIndex} max={totalTasks} color={isExam ? "bg-red-500" : "bg-green-500"} />
-      </div>
+            
+            <h2 className="text-2xl md:text-3xl font-bold leading-tight">
+                {currentTask.type === 'theory' ? currentTask.content : currentTask.question}
+            </h2>
+          </div>
 
-     
-      <div className="flex-1 flex flex-col justify-center">
-        <div className="bg-gray-800 p-8 rounded-3xl border border-gray-700 shadow-xl mb-8">
-            <h1 className="text-2xl font-bold text-white text-center">{currentTask.question}</h1>
-        </div>
+          {currentTask.type === 'quiz' && (
+            <div className="space-y-3 mb-6">
+                {currentTask.options.map((option, idx) => {
 
-       
-        <div className="grid grid-cols-1 gap-4 mb-8">
-            {currentTask.options.map((opt, i) => {
-                let style = "bg-gray-700 hover:bg-gray-600";
-                
-                
-                if (isCorrect !== null) {
-                   if (opt === currentTask.correct) style = "bg-green-600";
-                   else if (opt === selectedOption) style = "bg-red-600";
-                   else style = "opacity-50";
-                } else if (selectedOption === opt) {
-                   style = "bg-blue-600 ring-2 ring-blue-400";
-                }
+                    let btnClass = "bg-gray-700 hover:bg-gray-600 border-gray-600";
+                    if (isCorrect !== null) {
+                        if (option === currentTask.correct) btnClass = "bg-green-600 border-green-500";
+                        else if (selectedOption === option && option !== currentTask.correct) btnClass = "bg-red-600 border-red-500"; 
+                        else btnClass = "opacity-50 cursor-not-allowed";
+                    } else if (selectedOption === option) {
+                        btnClass = "bg-blue-600 border-blue-500 ring-2 ring-blue-400"; 
+                    }
 
-                return (
-                    <button 
-                        key={i}
-                        onClick={() => !isCorrect && onSelectOption(opt)}
-                        disabled={isCorrect !== null}
-                        className={`p-4 rounded-xl text-lg font-bold text-white transition-all ${style}`}
-                    >
-                        {opt}
-                    </button>
-                );
-            })}
-        </div>
-      </div>
+                    return (
+                        <button
+                            key={idx}
+                            onClick={() => !isCorrect && onSelectOption(option)}
+                            disabled={isCorrect !== null}
+                            className={`w-full text-left p-4 rounded-xl border-2 transition-all font-medium text-lg ${btnClass}`}
+                        >
+                            {option}
+                        </button>
+                    );
+                })}
+            </div>
+          )}
 
-     
-      <div className="mt-auto pt-6 border-t border-gray-800 flex items-center justify-between">
-          
-            {!isExam ? (
-                <Link to="/chat" className="flex items-center gap-2 text-blue-400 font-bold hover:text-blue-300">
-                    <span>💡</span> Hint
-                </Link>
-            ) : (
-                <span className="text-gray-600 italic text-sm">No hints allowed in exam mode.</span>
+
+          <div className="mt-8 pt-6 border-t border-gray-700">
+
+            {!aiHelp && !isAiLoading && (
+                <button 
+                  onClick={onAskLumen}
+                  className="flex items-center gap-2 text-blue-400 hover:text-white transition bg-blue-900/20 px-4 py-2 rounded-lg border border-blue-800/50 hover:border-blue-500 hover:bg-blue-900/40"
+                >
+                  <span className="text-xl">🤖</span> 
+                  <span className="font-bold text-sm">I'm stuck, Lumen! Explain this.</span>
+                </button>
             )}
 
-            <div className="w-40">
-                {isCorrect === null ? (
-                    <Button label="Check" onClick={onCheck} disabled={!selectedOption} />
-                ) : (
-                    <Button 
-                        label={currentIndex + 1 === totalTasks ? "Finish" : "Next"} 
-                        onClick={onNext} 
-                        variant={isExam || isCorrect ? "primary" : "danger"} 
-                    />
-                )}
-            </div>
+            {isAiLoading && (
+                <div className="flex items-center gap-3 text-gray-400 animate-pulse p-2">
+                  <div className="h-2 w-2 bg-blue-500 rounded-full animate-bounce"></div>
+                  <div className="h-2 w-2 bg-blue-500 rounded-full animate-bounce delay-75"></div>
+                  <div className="h-2 w-2 bg-blue-500 rounded-full animate-bounce delay-150"></div>
+                  <span className="text-sm font-medium">Lumen is thinking...</span>
+                </div>
+            )}
+
+            {aiHelp && (
+                <div className="bg-gradient-to-r from-gray-700 to-gray-800 border-l-4 border-blue-500 p-4 rounded-r-xl shadow-lg relative animate-fade-in-up">
+                  <div className="flex gap-4">
+                    <div className="text-3xl shrink-0">🤖</div>
+                    <div className="text-gray-200 text-sm leading-relaxed">
+                        <div className="font-bold text-blue-300 mb-1 text-xs uppercase tracking-wider">Lumen says:</div>
+                        {aiHelp}
+                    </div>
+                  </div>
+                </div>
+            )}
+          </div>
+
+          <div className="mt-8 flex justify-end">
+            {currentTask.type === 'theory' ? (
+                 <button 
+                    onClick={onNext}
+                    className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg transform hover:scale-105 transition"
+                 >
+                    Got it! Next ➜
+                 </button>
+            ) : (
+                <>
+                    {selectedOption && isCorrect === null && (
+                        <button 
+                            onClick={onCheck}
+                            className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg transform hover:scale-105 transition"
+                        >
+                            Check Answer
+                        </button>
+                    )}
+
+                    {isCorrect !== null && (
+                        <button 
+                            onClick={onNext}
+                            className={`${isCorrect ? 'bg-green-600 hover:bg-green-500' : 'bg-gray-600 hover:bg-gray-500'} text-white font-bold py-3 px-8 rounded-xl shadow-lg transform hover:scale-105 transition flex items-center gap-2`}
+                        >
+                            {isCorrect ? "Awesome! Next ➜" : "Continue ➜"}
+                        </button>
+                    )}
+                </>
+            )}
+          </div>
+
+        </div>
       </div>
     </div>
   );

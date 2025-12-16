@@ -23,15 +23,10 @@ export const SUBJECTS = [
 ];
 
 const UNITS_DB = [
-
     { id: "math_u1", subjectId: "math", title: "Unit 1: Number Basics", description: "Start your journey with simple numbers." },
     { id: "math_u2", subjectId: "math", title: "Unit 2: Subtraction Squad", description: "Learning to take things away." },
-    
-
     { id: "sci_u1", subjectId: "science", title: "Unit 1: States of Matter", description: "Solids, Liquids, and Gases!" },
     { id: "sci_u2", subjectId: "science", title: "Unit 2: The Solar System", description: "Explore the planets and stars." },
-
-
     { id: "eng_u1", subjectId: "english", title: "Unit 1: Nouns & Names", description: "People, places, and things." },
     { id: "eng_u2", subjectId: "english", title: "Unit 2: Action Verbs", description: "Running, jumping, and playing!" }
 ];
@@ -87,7 +82,6 @@ The "+" sign means "add" or "plus".
             { type: "quiz", question: "2 + 2 + 2 = ?", options: ["4", "6", "8"], correct: "6" }
         ]
     },
-
     {
         id: "math_002_theory",
         unitId: "math_u2",
@@ -160,8 +154,6 @@ There are three main states of matter:
             { type: "quiz", question: "What do we breathe?", options: ["Rocks", "Water", "Air (Gas)"], correct: "Air (Gas)" }
         ]
     },
-
-
     {
         id: "eng_001_theory",
         unitId: "eng_u1",
@@ -200,8 +192,14 @@ If you can touch it or see it, it is usually a noun!
     }
 ];
 
+
+
 export function getSubjects() {
     return SUBJECTS;
+}
+
+export function getSubjectById(id) {
+    return SUBJECTS.find(subject => subject.id === id);
 }
 
 export function getUnitsBySubject(subjectId) {
@@ -212,9 +210,15 @@ export function getMissionsByUnit(unitId) {
     return MISSIONS_DB.filter(mission => mission.unitId === unitId);
 }
 
+export function getMissionsBySubject(subjectId) {
+    const subjectUnits = UNITS_DB.filter(u => u.subjectId === subjectId);
+    const unitIds = subjectUnits.map(u => u.id);
+    
+    return MISSIONS_DB.filter(m => unitIds.includes(m.unitId));
+}
+
 export function getMissionById(missionId) {
     return MISSIONS_DB.find(mission => mission.id === missionId);
-   
 }
 
 export function getUnitById(unitId) {

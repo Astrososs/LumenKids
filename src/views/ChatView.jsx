@@ -1,88 +1,132 @@
-import React, { useEffect, useRef } from "react";
 
-export default function ChatView({ messages, input, setInput, isLoading, onSend }) {
+import React, { useRef, useEffect } from 'react';
 
-  const messagesEndRef = useRef(null);
+const ChatView = ({ 
+  chats, currentChatId, messages, 
+  input, setInput, loading, 
+  onSend, onSelectChat, onNewChat, onDeleteChat,
+  hasActiveChat 
+}) => {
+  
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
+  const bottomRef = useRef(null);
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isLoading]);
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   return (
-
-    <div className="w-full max-w-7xl mx-auto p-4 md:p-6 flex flex-col h-[85vh]">
+    <div className="flex h-[calc(100vh-64px)] bg-gray-900 text-white overflow-hidden">
       
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-white">Chat with Lumen 🤖</h2>
-        <span className="text-xs text-gray-400 bg-gray-800 px-2 py-1 rounded border border-gray-700">
-            Powered by Gemini
-        </span>
-      </div>
-
-
-      <div className="flex-1 bg-gray-800 border border-gray-700 rounded-2xl p-4 overflow-y-auto space-y-4 shadow-inner custom-scrollbar">
-        {messages.map((msg, index) => {
-            const isUser = msg.role === "user";
-            return (
-                <div 
-                    key={index} 
-                    className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-                >
-                    <div 
-                        className={`max-w-[80%] md:max-w-[70%] p-3 rounded-2xl text-sm md:text-base leading-relaxed shadow-md ${
-                            isUser 
-                            ? "bg-blue-600 text-white rounded-br-none" 
-                            : "bg-gray-700 text-gray-100 rounded-bl-none border border-gray-600"
-                        }`}
-                    >
-                        <strong className="block text-xs opacity-75 mb-1">
-                            {isUser ? "You" : "Lumen"}
-                        </strong>
-                        {msg.text}
-                    </div>
-                </div>
-            );
-        })}
-
-
-        {isLoading && (
-            <div className="flex justify-start animate-pulse">
-                <div className="bg-gray-700 text-gray-400 p-3 rounded-2xl rounded-bl-none text-sm border border-gray-600 flex items-center gap-2">
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-75"></span>
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></span>
-                    <span>Thinking...</span>
-                </div>
-            </div>
-        )}
+      
+      <div className="w-1/4 min-w-[250px] bg-gray-800 border-r border-gray-700 flex flex-col">
         
+       
+        <div className="p-4">
+          <button 
+            onClick={onNewChat}
+            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-bold transition shadow-lg border border-blue-400"
+          >
+            <span className="text-xl">+</span> New Chat
+          </button>
+        </div>
 
-        <div ref={messagesEndRef} />
+      
+        <div className="flex-1 overflow-y-auto p-2 space-y-2">
+          {chats.length === 0 && (
+            <div className="text-gray-500 text-center text-sm mt-10">No history yet.</div>
+          )}
+
+          {chats.map(chat => (
+            <div 
+              key={chat.id}
+              onClick={() => onSelectChat(chat.id)}
+              className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition ${
+                chat.id === currentChatId ? 'bg-gray-700 border border-gray-600' : 'hover:bg-gray-700/50'
+              }`}
+            >
+              <div className="flex items-center gap-3 overflow-hidden">
+                <span className="text-lg">💬</span>
+                <span className="text-sm text-gray-300 truncate font-medium">
+                  {chat.title || "New Conversation"}
+                </span>
+              </div>
+              
+            
+              <button 
+                onClick={(e) => onDeleteChat(e, chat.id)}
+                className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 transition px-2"
+                title="Delete Chat"
+              >
+                🗑
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
 
+   
+      <div className="flex-1 flex flex-col bg-gray-900 relative">
+        
+        {!hasActiveChat && chats.length === 0 ? (
+          
+           <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
+             <div className="text-6xl mb-4">🤖</div>
+             <h2 className="text-2xl font-bold text-white">Lumen AI Buddy</h2>
+             <p>Ask me anything about your homework!</p>
+           </div>
+        ) : (
+        
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {messages.map((msg, index) => (
+              <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div 
+                  className={`max-w-[70%] p-4 rounded-2xl shadow-md text-sm leading-relaxed ${
+                    msg.role === 'user' 
+                      ? 'bg-blue-600 text-white rounded-br-none' 
+                      : 'bg-gray-700 text-gray-200 rounded-bl-none border border-gray-600'
+                  }`}
+                >
+                  {msg.content}
+                </div>
+              </div>
+            ))}
+            {loading && (
+              <div className="flex justify-start">
+                <div className="bg-gray-700 p-4 rounded-2xl rounded-bl-none animate-pulse text-gray-400 text-sm">
+                  Thinking...
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
+        )}
 
-      <div className="mt-4 flex gap-2 md:gap-4">
-        <input 
-          className="flex-1 bg-gray-800 text-white border border-gray-600 focus:border-blue-500 rounded-xl p-4 outline-none transition shadow-lg placeholder-gray-500"
-          value={input} 
-          onChange={(e) => setInput(e.target.value)} 
-          onKeyDown={(e) => e.key === "Enter" && !isLoading && onSend()}
-          placeholder="Ask a question about space, math, or science..." 
-          disabled={isLoading}
-        />
-        <button 
-          onClick={onSend} 
-          disabled={isLoading || !input.trim()}
-          className="bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold rounded-xl px-6 md:px-8 transition shadow-lg flex items-center gap-2"
-        >
-          <span>Send</span>
-          <span className="text-xl">🚀</span>
-        </button>
+       
+        <div className="p-4 bg-gray-800 border-t border-gray-700">
+          <form 
+            onSubmit={(e) => { e.preventDefault(); onSend(); }}
+            className="relative max-w-4xl mx-auto"
+          >
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Type your question..."
+              className="w-full bg-gray-700 text-white placeholder-gray-400 rounded-xl pl-4 pr-12 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-600 shadow-inner"
+            />
+            <button 
+              type="submit"
+              disabled={loading || !input.trim()}
+              className="absolute right-2 top-2 bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-lg transition disabled:opacity-50"
+            >
+              🚀
+            </button>
+          </form>
+        </div>
+
       </div>
     </div>
   );
-}
+};
+
+export default ChatView;

@@ -1,61 +1,98 @@
-
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 
 const ChatView = ({ 
   chats, currentChatId, messages, 
   input, setInput, loading, 
   onSend, onSelectChat, onNewChat, onDeleteChat,
-  hasActiveChat 
+  hasActiveChat,
+  isMobileMenuOpen, setIsMobileMenuOpen,
+  onBack
 }) => {
   
-
   const bottomRef = useRef(null);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, loading]);
+
+  const handleNewChatClick = (e) => {
+    e.preventDefault();
+    onNewChat();
+  };
 
   return (
-    <div className="flex h-[calc(100vh-64px)] bg-gray-900 text-white overflow-hidden">
+    <div className="fixed inset-0 md:static md:h-screen md:flex md:flex-row bg-gray-900 text-white overflow-hidden">
       
-      
-      <div className="w-1/4 min-w-[250px] bg-gray-800 border-r border-gray-700 flex flex-col">
+      <div className="absolute top-0 left-0 w-full h-16 bg-gray-800 border-b border-gray-700 z-40 flex items-center justify-between px-4 shadow-md md:hidden">
         
-       
-        <div className="p-4">
+        <div className="flex items-center gap-3">
+           <button 
+             onClick={onBack}
+             className="p-2 -ml-2 rounded-full hover:bg-gray-700 text-gray-300 hover:text-white transition"
+             title="Go Back"
+           >
+             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+               <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+             </svg>
+           </button>
+
+           <div className="flex items-center gap-2">
+              <span className="text-xl">🤖</span>
+              <span className="font-bold text-blue-400">Buddy</span>
+           </div>
+        </div>
+
+        <button 
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="bg-gray-700 text-white px-3 py-1.5 rounded-lg text-sm border border-gray-600 active:scale-95 transition font-medium"
+        >
+          {isMobileMenuOpen ? "Close" : "History"}
+        </button>
+      </div>
+
+      <div className={`
+          fixed inset-y-0 left-0 z-50 w-[80%] max-w-[300px] bg-gray-800 border-r border-gray-700 shadow-2xl
+          transform transition-transform duration-300 ease-in-out
+          md:relative md:translate-x-0 md:w-80 md:flex md:flex-col md:z-0 md:shadow-none
+          ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        
+        <div className="p-4 mt-16 md:mt-0"> 
           <button 
-            onClick={onNewChat}
-            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-bold transition shadow-lg border border-blue-400"
+            onClick={handleNewChatClick}
+            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-bold transition shadow-lg border border-blue-400 active:scale-95"
           >
             <span className="text-xl">+</span> New Chat
           </button>
         </div>
 
-      
         <div className="flex-1 overflow-y-auto p-2 space-y-2">
           {chats.length === 0 && (
-            <div className="text-gray-500 text-center text-sm mt-10">No history yet.</div>
+            <div className="text-gray-500 text-center text-sm mt-10 px-4">
+              No history yet. Start a new chat!
+            </div>
           )}
 
           {chats.map(chat => (
             <div 
               key={chat.id}
               onClick={() => onSelectChat(chat.id)}
-              className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition ${
-                chat.id === currentChatId ? 'bg-gray-700 border border-gray-600' : 'hover:bg-gray-700/50'
+              className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition border ${
+                chat.id === currentChatId 
+                  ? 'bg-gray-700 border-blue-500/50' 
+                  : 'border-transparent hover:bg-gray-700/50'
               }`}
             >
               <div className="flex items-center gap-3 overflow-hidden">
                 <span className="text-lg">💬</span>
-                <span className="text-sm text-gray-300 truncate font-medium">
+                <span className="text-sm text-gray-300 truncate font-medium w-full">
                   {chat.title || "New Conversation"}
                 </span>
               </div>
               
-            
               <button 
                 onClick={(e) => onDeleteChat(e, chat.id)}
-                className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-400 transition px-2"
-                title="Delete Chat"
+                className="md:opacity-0 md:group-hover:opacity-100 text-gray-500 hover:text-red-400 transition px-2"
               >
                 🗑
               </button>
@@ -64,23 +101,27 @@ const ChatView = ({
         </div>
       </div>
 
-   
-      <div className="flex-1 flex flex-col bg-gray-900 relative">
+      {isMobileMenuOpen && (
+        <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+        ></div>
+      )}
+
+      <div className="absolute inset-0 top-16 md:static md:top-0 md:flex-1 flex flex-col bg-gray-900 z-0">
         
-        {!hasActiveChat && chats.length === 0 ? (
-          
-           <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-             <div className="text-6xl mb-4">🤖</div>
-             <h2 className="text-2xl font-bold text-white">Lumen AI Buddy</h2>
-             <p>Ask me anything about your homework!</p>
+        {!hasActiveChat ? (
+           <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-6 text-center animate-fade-in">
+             <div className="text-6xl mb-4 bg-gray-800 p-6 rounded-full shadow-lg">🤖</div>
+             <h2 className="text-2xl font-bold text-white mb-2">Lumen AI Buddy</h2>
+             <p className="max-w-md text-sm">I can help you with Math, Science, or English! Just type your question below to start.</p>
            </div>
         ) : (
-        
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scrollbar-thin scrollbar-thumb-gray-700">
             {messages.map((msg, index) => (
               <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div 
-                  className={`max-w-[70%] p-4 rounded-2xl shadow-md text-sm leading-relaxed ${
+                  className={`max-w-[85%] md:max-w-[70%] p-3 md:p-4 rounded-2xl shadow-md text-sm md:text-base leading-relaxed ${
                     msg.role === 'user' 
                       ? 'bg-blue-600 text-white rounded-br-none' 
                       : 'bg-gray-700 text-gray-200 rounded-bl-none border border-gray-600'
@@ -92,8 +133,11 @@ const ChatView = ({
             ))}
             {loading && (
               <div className="flex justify-start">
-                <div className="bg-gray-700 p-4 rounded-2xl rounded-bl-none animate-pulse text-gray-400 text-sm">
-                  Thinking...
+                <div className="bg-gray-700 p-4 rounded-2xl rounded-bl-none animate-pulse text-gray-400 text-sm flex gap-2 items-center">
+                  <span>Thinking</span>
+                  <span className="animate-bounce">.</span>
+                  <span className="animate-bounce delay-100">.</span>
+                  <span className="animate-bounce delay-200">.</span>
                 </div>
               </div>
             )}
@@ -101,23 +145,22 @@ const ChatView = ({
           </div>
         )}
 
-       
-        <div className="p-4 bg-gray-800 border-t border-gray-700">
+        <div className="p-3 md:p-4 bg-gray-800/90 backdrop-blur-md border-t border-gray-700 z-20">
           <form 
             onSubmit={(e) => { e.preventDefault(); onSend(); }}
-            className="relative max-w-4xl mx-auto"
+            className="relative max-w-4xl mx-auto flex gap-2"
           >
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Type your question..."
-              className="w-full bg-gray-700 text-white placeholder-gray-400 rounded-xl pl-4 pr-12 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-600 shadow-inner"
+              placeholder="Ask a question..."
+              className="flex-1 bg-gray-700 text-white placeholder-gray-400 rounded-xl px-4 py-3 md:py-4 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-600 shadow-inner text-sm md:text-base"
             />
             <button 
               type="submit"
               disabled={loading || !input.trim()}
-              className="absolute right-2 top-2 bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-lg transition disabled:opacity-50"
+              className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 md:px-6 rounded-xl transition disabled:opacity-50 font-bold shadow-lg flex items-center justify-center active:scale-95"
             >
               🚀
             </button>

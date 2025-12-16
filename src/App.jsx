@@ -7,7 +7,6 @@ import { auth } from './firebase/firebaseConfig';
 import { getUserProfile } from './models/userModel'; 
 import { loginSuccess, logout } from './store/slices/userSlice'; 
 
-
 import SidebarPresenter from './presenters/SidebarPresenter'; 
 import DashboardPresenter from './presenters/DashboardPresenter';
 import ChatPresenter from './presenters/ChatPresenter';
@@ -15,7 +14,6 @@ import LoginPresenter from './presenters/LoginPresenter';
 import CoursesPresenter from './presenters/CoursesPresenter'; 
 import SubjectPresenter from './presenters/SubjectPresenter'; 
 import MissionPresenter from './presenters/MissionPresenter'; 
-
 
 const RequireAuth = ({ children }) => {
   const { isAuthenticated } = useSelector((state) => state.user);
@@ -30,19 +28,15 @@ function App() {
   const [isAuthChecking, setIsAuthChecking] = useState(true);
 
   useEffect(() => {
-
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
-
         const userProfile = await getUserProfile(currentUser.uid);
         if (userProfile) {
             dispatch(loginSuccess(userProfile));
         }
       } else {
-
         dispatch(logout());
       }
-      
       setIsAuthChecking(false);
     });
 
@@ -57,9 +51,8 @@ function App() {
     );
   }
 
-
   const layoutClasses = isAuthenticated 
-    ? "flex-1 min-h-screen transition-all duration-300 pt-16 md:pt-0 md:ml-64"
+    ? "flex-1 min-h-screen transition-all duration-300 pt-16 md:pt-0" 
     : "flex-1 min-h-screen w-full"; 
 
   return (
@@ -71,7 +64,6 @@ function App() {
         <main className={layoutClasses}>
           <div className="w-full h-full"> 
             <Routes>
-              
               <Route path="/login" element={<LoginPresenter />} />
               
               <Route path="/" element={
@@ -105,7 +97,6 @@ function App() {
               } />
 
               <Route path="*" element={<Navigate to="/login" replace />} />
-              
             </Routes>
           </div>
         </main>

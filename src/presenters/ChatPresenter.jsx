@@ -1,98 +1,90 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom'; 
 import { 
   createNewChat, 
   sendMessageToChat, 
   deleteChat, 
   subscribeToChats 
 } from '../models/chatModel';
-import { sendMessageToAi } from '../models/aiModel';
+
 import ChatView from '../views/ChatView';
+import { sendMessageToAi } from '../models/aimodel'; 
 
 export default function ChatPresenter() {
+  const navigate = useNavigate(); 
   const { data: user } = useSelector((state) => state.user);
   
   const [chats, setChats] = useState([]);
   const [currentChatId, setCurrentChatId] = useState(null);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
- 
   useEffect(() => {
     if (!user?.uid) return;
-    
     const unsubscribe = subscribeToChats(user.uid, (data) => {
       setChats(data);
-     
+      if (!currentChatId && data.length > 0) {
+        setCurrentChatId(data[0].id);
+      }
     });
-
     return () => unsubscribe();
-  }, [user, currentChatId]);
-
+  }, [user]);
 
   const activeChat = chats.find(c => c.id === currentChatId);
   const messages = activeChat ? activeChat.messages : [];
 
- 
+  const handleBack = () => {
+    navigate('/'); 
+  };
 
   const handleSend = async () => {
     if (!input.trim() || !user) return;
-    
-    const userQuestion = input;
+    const userMsg = input;
     setInput(""); 
     setLoading(true);
 
     try {
       let activeId = currentChatId;
-
-  
-      const userMsgObj = { 
-        role: 'user', 
-        content: userQuestion,
-        timestamp: new Date().toISOString()
-      };
-
-    
       if (!activeId) {
-      
-        activeId = await createNewChat(user.uid, userQuestion);
+        activeId = await createNewChat(user.uid, userMsg);
         setCurrentChatId(activeId);
       } else {
-       
-        await sendMessageToChat(user.uid, activeId, userMsgObj);
+        await sendMessageToChat(user.uid, activeId, { role: 'user', content: userMsg });
       }
 
-      const contextForAi = messages.map(msg => ({
-        role: msg.role,
-        text: msg.content 
-      }));
+      const historyContext = messages.map(msg => ({ role: msg.role, text: msg.content }));
+      const userAge = user.age || 10; 
 
-      const userAge = user.stats?.age || 10; 
-      const aiResult = await sendMessageToAi(userQuestion, userAge, contextForAi);
-
+      const aiResponseObj = await sendMessageToAi(userMsg, userAge, historyContext);
       
-      const aiMsgObj = {
-        role: 'assistant',
-        content: aiResult.text,
-        timestamp: aiResult.timestamp || new Date().toISOString()
-      };
-
-      await sendMessageToChat(user.uid, activeId, aiMsgObj);
+      await sendMessageToChat(user.uid, activeId, { 
+        role: 'assistant', 
+        content: aiResponseObj.text 
+      });
 
     } catch (error) {
-      console.error("Chat Flow Error:", error);
-      alert("Something went wrong talking to Lumen.");
+      console.error("Chat Error:", error);
+      alert("Failed to send message.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleNewChat = () => {
-    setCurrentChatId(null); 
+    setCurrentChatId(null);
+    setIsMobileMenuOpen(false);
+    setInput("");
+  };
+
+  const handleSelectChat = (id) => {
+    setCurrentChatId(id);
+    setIsMobileMenuOpen(false);
   };
 
   const handleDelete = async (e, chatId) => {
-    e.stopPropagation();
+    e.stopPropagation(); 
     if (window.confirm("Delete this conversation?")) {
       await deleteChat(user.uid, chatId);
       if (currentChatId === chatId) setCurrentChatId(null);
@@ -108,10 +100,13 @@ export default function ChatPresenter() {
       setInput={setInput}
       loading={loading}
       onSend={handleSend}
-      onSelectChat={setCurrentChatId}
+      onSelectChat={handleSelectChat}
       onNewChat={handleNewChat}
       onDeleteChat={handleDelete}
       hasActiveChat={!!currentChatId}
+      isMobileMenuOpen={isMobileMenuOpen}
+      setIsMobileMenuOpen={setIsMobileMenuOpen}
+      onBack={handleBack} 
     />
   );
 }

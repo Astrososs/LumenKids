@@ -1,61 +1,104 @@
-import ProfileHeader from '../components/profile/ProfileHeader';
-import StatBox from '../components/profile/StatBox';
-import Button from '../components/common/Button';
+import { useNavigate } from 'react-router-dom';
 
-const DashboardView = ({ user, missions }) => {
-  const MissionCard = ({ mission }) => (
-    <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 hover:border-blue-500 transition shadow-lg group cursor-pointer">
-      <div className="flex justify-between items-start mb-4">
-        <span className="text-3xl group-hover:scale-110 transition">🚀</span>
-        <span className="bg-blue-900 text-blue-200 text-xs font-bold px-2 py-1 rounded-full">Lvl {mission.difficulty}</span>
-      </div>
-      <h3 className="text-white font-bold text-xl mb-2">{mission.topic_name || "Mission"}</h3>
-      <p className="text-gray-400 text-sm">Complete this to earn XP!</p>
-    </div>
-  );
+
+const DashboardView = ({ user, onLogout }) => {
+  const navigate = useNavigate();
+
+  const totalXp = user?.stats?.xp || 0;
+  const currentLevelProgress = totalXp % 100; 
 
   return (
-    <div className="min-h-screen bg-gray-900 pb-20">
-      <div className="w-full max-w-7xl mx-auto p-6 space-y-8">
+    <div className="p-6 md:p-10 space-y-8 max-w-7xl mx-auto">
+      
+      <header className="flex flex-col md:flex-row justify-between items-center gap-4 bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-lg">
+        <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-3xl shadow-inner border-2 border-blue-400">
+                {user?.nickname ? user.nickname[0].toUpperCase() : "U"}
+            </div>
+            <div>
+                <h1 className="text-3xl font-bold text-white">
+                    Hello, <span className="text-blue-400">{user?.nickname || "Explorer"}</span>! 🚀
+                </h1>
+                <p className="text-gray-400">Ready to learn something new today?</p>
+            </div>
+        </div>
         
-        {/* Header */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-           <div>
-             <h1 className="text-3xl font-bold text-white mb-2">Welcome Back! 👋</h1>
-             <div className="mt-2">
-                {user ? <ProfileHeader user={user} /> : <span className="text-gray-400">Loading...</span>}
-             </div>
-           </div>
-        </header>
+        <button 
+            onClick={onLogout}
+            className="px-6 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/50 rounded-full transition text-sm font-bold"
+        >
+            Logout
+        </button>
+      </header>
 
-        {/* Stats Grid */}
-        {user?.stats && (
-            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatBox label="Streak" value={`${user.stats.streakDays} Days`} icon="🔥" color="bg-orange-100 text-orange-600" />
-                <StatBox label="Stars" value={user.stats.totalStars} icon="⭐" color="bg-yellow-100 text-yellow-600" />
-            </section>
-        )}
-
-        {/* Missions Grid */}
-        <section>
-            <div className="flex justify-between items-end mb-6">
-                <h2 className="text-2xl font-bold text-white">Your Missions</h2>
-                <Button label="View All" variant="white" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-md">
+            <div className="flex justify-between items-end mb-2">
+                <div>
+                    <h3 className="text-gray-400 text-sm font-bold uppercase">Current Level</h3>
+                    <div className="text-4xl font-extrabold text-white mt-1">
+                        {user?.stats?.currentLevel || 1}
+                    </div>
+                </div>
+                <div className="text-right">
+                    <span className="text-blue-400 font-bold text-xl">{currentLevelProgress}</span>
+                    <span className="text-gray-500 text-sm"> / 100 XP</span>
+                </div>
             </div>
 
-            {missions?.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {missions.map((m, i) => <MissionCard key={i} mission={m} />)}
-                </div>
-            ) : (
-                <div className="w-full p-12 border-2 border-dashed border-gray-700 rounded-2xl flex flex-col items-center justify-center text-gray-500 gap-4">
-                    <span className="text-5xl animate-pulse">🚀</span>
-                    <p>Mission Control Loading...</p>
-                </div>
-            )}
-        </section>
+            <div className="w-full bg-gray-700 h-3 rounded-full overflow-hidden">
+                <div 
+                    className="bg-blue-500 h-full rounded-full transition-all duration-500 ease-out shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+                    style={{ width: `${currentLevelProgress}%` }} 
+                ></div>
+            </div>
+            <p className="text-xs text-gray-500 mt-3 text-center">
+                {100 - currentLevelProgress} XP needed for Level {(user?.stats?.currentLevel || 1) + 1}
+            </p>
+        </div>
 
+        <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-md flex items-center justify-between">
+            <div>
+                <h3 className="text-gray-400 text-sm font-bold uppercase">Day Streak</h3>
+                <div className="text-4xl font-extrabold text-white mt-1">
+                    {user?.stats?.streakDays || 0} 🔥
+                </div>
+                <p className="text-xs text-gray-500 mt-2">Keep it up!</p>
+            </div>
+        </div>
+
+        <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-md flex items-center justify-between">
+             <div>
+                <h3 className="text-gray-400 text-sm font-bold uppercase">Missions Done</h3>
+                <div className="text-4xl font-extrabold text-white mt-1">
+                    {user?.progress ? Object.keys(user.progress).length : 0} ✅
+                </div>
+                <p className="text-xs text-gray-500 mt-2">Total tasks completed</p>
+            </div>
+        </div>
       </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div 
+            onClick={() => navigate('/courses')}
+            className="group cursor-pointer bg-gradient-to-r from-blue-600 to-blue-800 p-8 rounded-2xl shadow-lg transform hover:scale-[1.02] transition border border-blue-500 relative overflow-hidden"
+        >
+            <div className="absolute right-[-20px] bottom-[-20px] text-9xl opacity-10 rotate-12">📚</div>
+            <h2 className="text-2xl font-bold text-white mb-2 group-hover:translate-x-1 transition">Continue Learning &rarr;</h2>
+            <p className="text-blue-100">Jump back into your Math or Science missions.</p>
+        </div>
+
+        <div 
+            onClick={() => navigate('/chat')}
+            className="group cursor-pointer bg-gradient-to-r from-purple-600 to-purple-800 p-8 rounded-2xl shadow-lg transform hover:scale-[1.02] transition border border-purple-500 relative overflow-hidden"
+        >
+             <div className="absolute right-[-20px] bottom-[-20px] text-9xl opacity-10 rotate-[-12deg]">🤖</div>
+            <h2 className="text-2xl font-bold text-white mb-2 group-hover:translate-x-1 transition">Ask AI Buddy &rarr;</h2>
+            <p className="text-purple-100">Stuck on a problem? Ask Lumen for help!</p>
+        </div>
+      </div>
+
     </div>
   );
 };

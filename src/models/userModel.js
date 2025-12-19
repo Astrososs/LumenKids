@@ -1,4 +1,3 @@
-
 import { auth, db } from "../firebase/firebaseConfig";
 import { 
   signInWithEmailAndPassword, 
@@ -12,27 +11,28 @@ import {
   updateDoc 
 } from "firebase/firestore";
 
-
 export const loginUser = async (email, password) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const uid = userCredential.user.uid;
     
-   
     const userProfile = await getUserProfile(uid);
+
+    if (!userProfile) {
+        return { success: false, error: "User profile not found." };
+    }
+
     return { success: true, user: userProfile };
   } catch (error) {
     return { success: false, error: error.message };
   }
 };
 
-
 export const registerUser = async (email, password, nickname) => {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const uid = userCredential.user.uid;
 
-  
     const newUserProfile = {
       uid: uid,
       nickname: nickname || "New Explorer",
@@ -74,7 +74,16 @@ export const getUserProfile = async (uid) => {
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-      return docSnap.data();
+      const data = docSnap.data();
+
+      return {
+
+        uid: docSnap.id, 
+        
+        ...data,
+        
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt
+      };
     } else {
       console.error("No such user document!");
       return null;

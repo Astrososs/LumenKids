@@ -1,94 +1,96 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { updateUserInDb } from '../../models/userModel'; 
+import { loginUser, registerUser, logoutUser, updateUserInDb } from '../../models/userModel';
 
-
-export const saveGameProgress = createAsyncThunk(
-    'user/saveGame',
-    async ({ uid, missionId, result, xpGained }, { getState }) => {
-      
-        const currentUserData = getState().user.data;
-        
-     
-        const currentXp = currentUserData.stats.xp || 0;
-        const currentLevel = currentUserData.stats.currentLevel || 1;
-        
-        const newXp = currentXp + xpGained;
-        
-       
-        let newLevel = currentLevel;
-        if (newXp >= 100) {
-            newLevel = currentLevel + Math.floor(newXp / 100);
-            
-        }
-
-       
-        const updates = {
-            [`progress.${missionId}`]: result, 
-            "stats.xp": newXp,
-            "stats.currentLevel": newLevel,
-            "stats.lastActive": new Date().toISOString()
-        };
-
-       
-        await updateUserInDb(uid, updates);
-
-        
-        return { missionId, result, newXp, newLevel };
+export const authenticateUser = createAsyncThunk(
+  'user/authenticate',
+  async ({ email, password, nickname, isRegistering }, { rejectWithValue }) => {
+    try {
+      let user;
+      if (isRegistering) {
+        user = await registerUser(email, password, nickname);
+      } else {
+        user = await loginUser(email, password);
+      }
+      return user;
+    } catch (err) {
+      return rejectWithValue(err.message);
     }
+  }
 );
 
-const initialState = {
-    data: null,
-    loading: false,
-    isAuthenticated: false,
-    error: null
-};
+export const signOutUser = createAsyncThunk(
+  'user/signOut',
+  async (_, { rejectWithValue }) => {
+    try {
+      await logoutUser();
+      return true;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const saveGameProgress = createAsyncThunk(
+  'user/saveProgress',
+  async ({ uid, missionId, result, xpGained }, { getState }) => {
+    const state = getState();
+    const currentUser = state.user.data;
+
+    const currentXP = (currentUser.stats?.xp || 0) + xpGained;
+    const currentStars = (currentUser.stats?.totalStars || 0) + result.stars;
+    const newLevel = Math.floor(currentXP / 100) + 1;
+
+    const updates = {
+      [`progress.${missionId}`]: result,
+      'stats.xp': currentXP,
+      'stats.totalStars': currentStars,
+      'stats.currentLevel': newLevel
+    };
+
+    await updateUserInDb(uid, updates);
+
+    return { missionId, result, xp: currentXP, stars: currentStars, level: newLevel };
+  }
+);
 
 const userSlice = createSlice({
-    name: 'users',
-    initialState,
-    reducers: {
-        loginStart: (state) => {
-            state.loading = true;
-            state.error = null;
-        },
-        loginSuccess: (state, action) => {
-            state.data = action.payload;
-            state.loading = false;
-            state.isAuthenticated = true;
-            state.error = null;
-        },
-        loginFailure: (state, action) => {
-            state.loading = false;
-            state.error = action.payload;
-            state.isAuthenticated = false;
-        },
-        logout: (state) => {
-            state.data = null;
-            state.isAuthenticated = false;
-            state.loading = false;
-            state.error = null;
-        }
+  name: 'user',
+  initialState: {
+    data: null,
+    loading: true, 
+    error: null
+  },
+  reducers: {
+    setLoading: (state, action) => { state.loading = action.payload; },
+    loginSuccess: (state, action) => { 
+      state.data = action.payload;
+      state.loading = false;
+      state.error = null;
     },
-    extraReducers: (builder) => {
-       
-        builder.addCase(saveGameProgress.fulfilled, (state, action) => {
-            if (state.data) {
-                const { missionId, result, newXp, newLevel } = action.payload;
-                
-              
-                if (!state.data.progress) state.data.progress = {};
-                state.data.progress[missionId] = result;
-
-                
-                state.data.stats.xp = newXp;
-                state.data.stats.currentLevel = newLevel;
-            }
-        });
-        
-       
+    logout: (state) => {
+      state.data = null;
+      state.loading = false;
+      state.error = null;
     }
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(authenticateUser.pending, (state) => { state.loading = true; state.error = null; })
+      .addCase(authenticateUser.fulfilled, (state, action) => { state.loading = false; state.data = action.payload; })
+      .addCase(authenticateUser.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
+      
+      .addCase(signOutUser.fulfilled, (state) => { state.data = null; state.loading = false; })
+
+      .addCase(saveGameProgress.fulfilled, (state, action) => {
+        if (state.data) {
+           state.data.progress = { ...state.data.progress, [action.payload.missionId]: action.payload.result };
+           state.data.stats.xp = action.payload.xp;
+           state.data.stats.totalStars = action.payload.stars;
+           state.data.stats.currentLevel = action.payload.level;
+        }
+      });
+  }
 });
 
-export const { loginStart, loginSuccess, loginFailure, logout } = userSlice.actions;
+export const { loginSuccess, logout, setLoading } = userSlice.actions;
 export default userSlice.reducer;

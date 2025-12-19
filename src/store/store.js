@@ -7,6 +7,6 @@ export const store = configureStore({
     reducer: {
         user: userReducer, 
         chat: chatReducer,
-        course: courseReducer 
+        courses: courseReducer 
     }
 });

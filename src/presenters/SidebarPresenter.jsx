@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { logout } from '../store/slices/userSlice';
-import { logoutUser } from '../models/userModel';
+import { signOutUser } from '../store/slices/userSlice';
 import SidebarView from '../views/pages/SidebarView';
 
 export default function SidebarPresenter() {
@@ -11,26 +10,18 @@ export default function SidebarPresenter() {
   const location = useLocation();
   
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const { data: user } = useSelector((state) => state.user);
 
   useEffect(() => {
     setIsMobileOpen(false);
   }, [location.pathname]);
 
-  const { isAuthenticated } = useSelector((state) => state.user);
-
-  const navItems = [
-    { label: "Dashboard", path: "/", icon: "🏠" },
-    { label: "Courses", path: "/courses", icon: "📚" },
-    { label: "AI Buddy", path: "/chat", icon: "🤖" },
-  ];
-
-  if (!isAuthenticated || location.pathname === '/login') {
+  if (!user || location.pathname === '/login') {
     return null;
   }
 
-  const handleLogout = async () => {
-    await logoutUser();
-    dispatch(logout());
+  const handleLogout = () => {
+    dispatch(signOutUser());
     navigate('/login');
   };
 
@@ -39,17 +30,19 @@ export default function SidebarPresenter() {
     setIsMobileOpen(false); 
   };
 
-  const isChatPage = location.pathname === '/chat';
-
   return (
     <SidebarView 
       currentPath={location.pathname}
-      navItems={navItems}
+      navItems={[
+        { label: "Dashboard", path: "/", icon: "🏠" },
+        { label: "Courses", path: "/courses", icon: "📚" },
+        { label: "AI Buddy", path: "/chat", icon: "🤖" },
+      ]}
       onNavigate={handleNavigate}
       onLogout={handleLogout}
       isMobileOpen={isMobileOpen}
       setIsMobileOpen={setIsMobileOpen}
-      hideMobileHeader={isChatPage}
+      hideMobileHeader={location.pathname === '/chat'}
     />
   );
 }

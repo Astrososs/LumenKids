@@ -1,36 +1,51 @@
-import { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useState, useEffect, useRef } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom'; 
 import { 
   createNewChat, 
   sendMessageToChat, 
   deleteChat, 
   subscribeToChats 
-} from '../models/chatModel';
+} from '../models/chatModel'; 
+import { setChatHistory } from '../store/slices/chatSlice'; 
+import { sendMessageToAi } from '../models/aiModel'; 
 
 import ChatView from '../views/ChatView';
-import { sendMessageToAi } from '../models/aimodel'; 
 
 export default function ChatPresenter() {
   const navigate = useNavigate(); 
+  const dispatch = useDispatch();
+
   const { data: user } = useSelector((state) => state.user);
   
-  const [chats, setChats] = useState([]);
+  const { history: chats } = useSelector((state) => state.chat);
+
   const [currentChatId, setCurrentChatId] = useState(null);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  const hasAutoSelectedRef = useRef(false);
+
   useEffect(() => {
     if (!user?.uid) return;
+
+    setCurrentChatId(null);
+    hasAutoSelectedRef.current = false; 
+
+    
     const unsubscribe = subscribeToChats(user.uid, (data) => {
-      setChats(data);
-      if (!currentChatId && data.length > 0) {
-        setCurrentChatId(data[0].id);
-      }
+      dispatch(setChatHistory(data)); 
     });
     return () => unsubscribe();
-  }, [user]);
+  }, [user, dispatch]);
+
+  useEffect(() => {
+    if (!currentChatId && chats.length > 0 && !hasAutoSelectedRef.current) {
+        setCurrentChatId(chats[0].id);
+        hasAutoSelectedRef.current = true;
+    }
+  }, [chats, currentChatId]);
 
   const activeChat = chats.find(c => c.id === currentChatId);
   const messages = activeChat ? activeChat.messages : [];
@@ -47,9 +62,11 @@ export default function ChatPresenter() {
 
     try {
       let activeId = currentChatId;
+
       if (!activeId) {
         activeId = await createNewChat(user.uid, userMsg);
         setCurrentChatId(activeId);
+        hasAutoSelectedRef.current = true;
       } else {
         await sendMessageToChat(user.uid, activeId, { role: 'user', content: userMsg });
       }

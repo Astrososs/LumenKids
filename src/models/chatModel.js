@@ -15,7 +15,7 @@ import {
 export const createNewChat = async (uid, firstMessage) => {
   try {
     const chatRef = await addDoc(collection(db, "users", uid, "chats"), {
-      title: firstMessage.slice(0, 30) + "...", // Auto-title based on first msg
+      title: firstMessage.slice(0, 30) + "...", 
       createdAt: serverTimestamp(),
       lastUpdated: serverTimestamp(),
       messages: [{ role: 'user', content: firstMessage }]
@@ -54,10 +54,17 @@ export const subscribeToChats = (uid, callback) => {
   );
 
   return onSnapshot(q, (snapshot) => {
-    const chats = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    const chats = snapshot.docs.map(doc => {
+      const data = doc.data();
+
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
+        lastUpdated: data.lastUpdated?.toDate ? data.lastUpdated.toDate().toISOString() : data.lastUpdated
+      };
+    });
+    
     callback(chats);
   });
 };

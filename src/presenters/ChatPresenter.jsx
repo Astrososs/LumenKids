@@ -1,28 +1,27 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom'; 
-import { 
-  createNewChat, 
-  sendMessageToChat, 
-  deleteChat, 
-  subscribeToChats 
-} from '../models/chatModel'; 
-import { setChatHistory } from '../store/slices/chatSlice'; 
-import { sendMessageToAi } from '../models/aiModel'; 
-
+import { useNavigate } from 'react-router-dom';
+import {
+  handleUserMessage,
+  subscribeToChatsThunk,
+  unsubscribeFromChatsThunk,
+  deleteChatThunk,
+  setChatHistory,
+} from '../store/slices/chatSlice';
 import ChatView from '../views/ChatView';
 
+const makeTempId = () => `temp_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+
 export default function ChatPresenter() {
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
   const dispatch = useDispatch();
 
   const { data: user } = useSelector((state) => state.user);
-  
-  const { history: chats } = useSelector((state) => state.chat);
+  const { history: chats, idMap, sendStatus, deleteStatus, subscribeStatus, error } =
+    useSelector((state) => state.chat);
 
   const [currentChatId, setCurrentChatId] = useState(null);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [input, setInput] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const hasAutoSelectedRef = useRef(false);
@@ -31,68 +30,60 @@ export default function ChatPresenter() {
     if (!user?.uid) return;
 
     setCurrentChatId(null);
-    hasAutoSelectedRef.current = false; 
+    hasAutoSelectedRef.current = false;
 
-    
-    const unsubscribe = subscribeToChats(user.uid, (data) => {
-      dispatch(setChatHistory(data)); 
-    });
-    return () => unsubscribe();
-  }, [user, dispatch]);
+    dispatch(subscribeToChatsThunk(user.uid));
+
+    return () => {
+      dispatch(unsubscribeFromChatsThunk());
+      dispatch(setChatHistory([]));
+    };
+  }, [user?.uid, dispatch]);
 
   useEffect(() => {
     if (!currentChatId && chats.length > 0 && !hasAutoSelectedRef.current) {
-        setCurrentChatId(chats[0].id);
-        hasAutoSelectedRef.current = true;
+      setCurrentChatId(chats[0].id);
+      hasAutoSelectedRef.current = true;
     }
   }, [chats, currentChatId]);
 
-  const activeChat = chats.find(c => c.id === currentChatId);
+  const resolvedChatId = (currentChatId && idMap[currentChatId]) || currentChatId;
+
+  const activeChat = chats.find((c) => c.id === resolvedChatId);
   const messages = activeChat ? activeChat.messages : [];
 
-  const handleBack = () => {
-    navigate('/'); 
-  };
+  const handleBack = () => navigate('/');
 
   const handleSend = async () => {
-    if (!input.trim() || !user) return;
+    if (!input.trim() || !user?.uid) return;
+
     const userMsg = input;
-    setInput(""); 
-    setLoading(true);
+    setInput('');
 
-    try {
-      let activeId = currentChatId;
-
-      if (!activeId) {
-        activeId = await createNewChat(user.uid, userMsg);
-        setCurrentChatId(activeId);
-        hasAutoSelectedRef.current = true;
-      } else {
-        await sendMessageToChat(user.uid, activeId, { role: 'user', content: userMsg });
-      }
-
-      const historyContext = messages.map(msg => ({ role: msg.role, text: msg.content }));
-      const userAge = user.age || 10; 
-
-      const aiResponseObj = await sendMessageToAi(userMsg, userAge, historyContext);
-      
-      await sendMessageToChat(user.uid, activeId, { 
-        role: 'assistant', 
-        content: aiResponseObj.text 
-      });
-
-    } catch (error) {
-      console.error("Chat Error:", error);
-      alert("Failed to send message.");
-    } finally {
-      setLoading(false);
+    const tempChatId = currentChatId ? null : makeTempId();
+    if (tempChatId) {
+      setCurrentChatId(tempChatId);
+      hasAutoSelectedRef.current = true;
     }
+
+    await dispatch(
+      handleUserMessage({
+        uid: user.uid,
+        chatId: currentChatId,
+        tempChatId,
+        message: userMsg,
+        userAge: user.stats?.age || 10,
+        history: messages,
+      })
+    );
+
+
   };
 
   const handleNewChat = () => {
     setCurrentChatId(null);
     setIsMobileMenuOpen(false);
-    setInput("");
+    setInput('');
   };
 
   const handleSelectChat = (id) => {
@@ -101,29 +92,40 @@ export default function ChatPresenter() {
   };
 
   const handleDelete = async (e, chatId) => {
-    e.stopPropagation(); 
-    if (window.confirm("Delete this conversation?")) {
-      await deleteChat(user.uid, chatId);
-      if (currentChatId === chatId) setCurrentChatId(null);
+    e.stopPropagation();
+    if (!user?.uid) return;
+
+    if (window.confirm('Delete this conversation?')) {
+      await dispatch(deleteChatThunk({ uid: user.uid, chatId }));
+
+      const resolved = (currentChatId && idMap[currentChatId]) || currentChatId;
+      if (resolved === chatId) setCurrentChatId(null);
     }
   };
+
+  const isSending = sendStatus === 'loading';
+  const isDeleting = deleteStatus === 'loading';
+  const isSubscribing = subscribeStatus === 'loading';
 
   return (
     <ChatView
       chats={chats}
-      currentChatId={currentChatId}
+      currentChatId={resolvedChatId}
       messages={messages}
       input={input}
       setInput={setInput}
-      loading={loading}
+      loading={isSending}
+      isDeleting={isDeleting}
+      isSubscribing={isSubscribing}
+      error={error}
       onSend={handleSend}
       onSelectChat={handleSelectChat}
       onNewChat={handleNewChat}
       onDeleteChat={handleDelete}
-      hasActiveChat={!!currentChatId}
+      hasActiveChat={!!resolvedChatId}
       isMobileMenuOpen={isMobileMenuOpen}
       setIsMobileMenuOpen={setIsMobileMenuOpen}
-      onBack={handleBack} 
+      onBack={handleBack}
     />
   );
 }

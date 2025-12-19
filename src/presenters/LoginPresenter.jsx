@@ -1,47 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { loginStart, loginSuccess, loginFailure } from '../store/slices/userSlice'; 
-import { loginUser, registerUser } from '../models/userModel';
+import { authenticateUser } from '../store/slices/userSlice'; 
 import LoginView from '../views/pages/LoginView';
 
 export default function LoginPresenter() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading, error } = useSelector((state) => state.user);
+  const { loading, error, data: user } = useSelector((state) => state.user);
   
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [nickname, setNickname] = useState("");
   const [isRegistering, setIsRegistering] = useState(false); 
 
-  const handleAuth = async () => {
+  useEffect(() => {
+    if (user) navigate('/');
+  }, [user, navigate]);
 
+  const handleAuth = () => {
     if (!email || !password) {
         alert("Please enter email and password");
         return;
     }
 
-    dispatch(loginStart());
-
-    let result;
-
-
-    if (isRegistering) {
-        result = await registerUser(email, password, nickname);
-    } else {
-        result = await loginUser(email, password);
-    }
-
-
-    
-    if (result.success) {
-        dispatch(loginSuccess(result.user));
-        navigate('/'); 
-    } else {
-        dispatch(loginFailure(result.error));
-    }
+    dispatch(authenticateUser({ email, password, nickname, isRegistering }));
   };
 
   return (

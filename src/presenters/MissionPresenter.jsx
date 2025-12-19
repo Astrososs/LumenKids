@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { getMissionById, getMissionsByUnit, getUnitById } from '../models/missionModel'; 
+import { loadActiveMission, clearActiveMission } from '../store/slices/courseSlice'; 
+import { getMissionsByUnit, getUnitById } from '../models/missionModel'; 
 import { saveGameProgress } from '../store/slices/userSlice';
 import { sendMessageToAi } from '../models/aiModel'; 
 import MissionView from '../views/pages/MissionView';
@@ -12,11 +13,8 @@ export default function MissionPresenter() {
   const dispatch = useDispatch();
 
   const { data: user } = useSelector((state) => state.user);
-  const mission = getMissionById(missionId);
   
-  const unitMissions = getMissionsByUnit(mission?.unitId);
-  const currentIndexInUnit = unitMissions ? unitMissions.findIndex(m => m.id === mission.id) : -1;
-  const nextMission = (unitMissions && currentIndexInUnit >= 0) ? unitMissions[currentIndexInUnit + 1] : null;
+  const { activeMission: mission, loading } = useSelector((state) => state.course);
 
   const [taskIndex, setTaskIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
@@ -26,8 +24,10 @@ export default function MissionPresenter() {
   const [aiHelp, setAiHelp] = useState(""); 
   const [isAiLoading, setIsAiLoading] = useState(false);
 
-
   useEffect(() => {
+    if (missionId) {
+      dispatch(loadActiveMission(missionId));
+    }
     setTaskIndex(0);
     setSelectedOption(null);
     setIsCorrect(null);
@@ -35,15 +35,29 @@ export default function MissionPresenter() {
     setIsFinished(false);
     setAiHelp("");
     setIsAiLoading(false);
-  }, [missionId]);
 
-  if (!mission || !mission.tasks || mission.tasks.length === 0) {
-      return <div className="p-10 text-white">Mission loading or not found...</div>;
+    return () => {
+      dispatch(clearActiveMission());
+    };
+  }, [missionId, dispatch]);
+
+  if (loading || !mission || !mission.tasks) {
+      return <div className="p-10 text-white animate-pulse">Loading Mission...</div>;
   }
+  
+  const unitMissions = getMissionsByUnit(mission?.unitId);
+  const currentIndexInUnit = unitMissions ? unitMissions.findIndex(m => m.id === mission.id) : -1;
+  const nextMission = (unitMissions && currentIndexInUnit >= 0) ? unitMissions[currentIndexInUnit + 1] : null;
   
   const currentTask = mission.tasks[taskIndex];
 
-
+  const checkAnswerStrictness = (userAns, correctAns) => {
+    if (!userAns || !correctAns) return false;
+    const clean = (str) => String(str).toLowerCase().replace(/^[\w\d]+[\)\.]\s*/, '').replace(/[^\w]/g, '').trim();
+    const u = clean(userAns);
+    const c = clean(correctAns);
+    return u === c || u.includes(c) || c.includes(u);
+  };
 
   const handleAskLumen = async () => {
     if (isAiLoading) return; 
@@ -70,7 +84,9 @@ export default function MissionPresenter() {
 
   const handleCheck = () => {
     if (!selectedOption) return;
-    const correct = selectedOption === currentTask.correct;
+    
+    const correct = checkAnswerStrictness(selectedOption, currentTask.correct);
+    
     setIsCorrect(correct);
     if (correct) setScore(prev => prev + 1);
   };
@@ -95,11 +111,10 @@ export default function MissionPresenter() {
 
     setIsFinished(true);
     
-
     let stars = 1;
-    const percentage = finalScore / mission.tasks.length;
+    const percentage = mission.tasks.length > 0 ? (finalScore / mission.tasks.length) : 0;
     if (percentage === 1) stars = 3;
-    else if (percentage > 0) stars = 2;
+    else if (percentage >= 0.5) stars = 2;
 
     const resultData = {
         status: 'completed',
@@ -109,17 +124,17 @@ export default function MissionPresenter() {
     };
 
     if (user && user.uid) {
+        const xpEarned = (mission.xpReward || 10) + (finalScore * 2);
         dispatch(saveGameProgress({
             uid: user.uid,
             missionId: mission.id,
             result: resultData,
-            xpGained: mission.xpReward + (finalScore * 2)
+            xpGained: xpEarned
         }));
     }
   };
 
   const handleExit = () => {
-
     const unit = getUnitById(mission.unitId);
     if (unit) {
         navigate(`/courses/${unit.subjectId}`);

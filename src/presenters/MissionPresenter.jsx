@@ -1,152 +1,121 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { loadActiveMission, clearActiveMission } from '../store/slices/courseSlice'; 
-import { getMissionsByUnit, getUnitById } from '../models/missionModel'; 
+import {
+  loadActiveMission,
+  clearActiveMission,
+  askLumenHelp,
+  clearAiHelp,
+} from '../store/slices/courseSlice';
 import { saveGameProgress } from '../store/slices/userSlice';
-import { sendMessageToAi } from '../models/aiModel'; 
 import MissionView from '../views/pages/MissionView';
+import { MissionSkeleton } from '../views/components/LoadingSkeletons';
+import { isAnswerCorrect, calculateRewards, generateAiPrompt } from '../utils/missionLogic';
 
 export default function MissionPresenter() {
   const { missionId } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
+  const { activeMission: mission, loading, error, aiHelp, aiHelpStatus } = useSelector(
+    (state) => state.courses
+  );
   const { data: user } = useSelector((state) => state.user);
-  
-  const { activeMission: mission, loading } = useSelector((state) => state.course);
 
   const [taskIndex, setTaskIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
   const [isCorrect, setIsCorrect] = useState(null);
   const [score, setScore] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
-  const [aiHelp, setAiHelp] = useState(""); 
-  const [isAiLoading, setIsAiLoading] = useState(false);
 
   useEffect(() => {
-    if (missionId) {
-      dispatch(loadActiveMission(missionId));
+    if (missionId && user?.uid) {
+      dispatch(loadActiveMission({ uid: user.uid, missionId }));
     }
-    setTaskIndex(0);
-    setSelectedOption(null);
-    setIsCorrect(null);
-    setScore(0);
-    setIsFinished(false);
-    setAiHelp("");
-    setIsAiLoading(false);
 
     return () => {
       dispatch(clearActiveMission());
+      setTaskIndex(0);
+      setIsFinished(false);
     };
-  }, [missionId, dispatch]);
+  }, [missionId, user?.uid, dispatch]);
 
-  if (loading || !mission || !mission.tasks) {
-      return <div className="p-10 text-white animate-pulse">Loading Mission...</div>;
+  if (loading && !mission) return <MissionSkeleton />;
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center text-white p-4 text-center">
+        <h2 className="text-2xl font-bold text-red-400 mb-2">Mission Not Found ⚠️</h2>
+        <p className="text-gray-400 mb-6">{error}</p>
+        <button
+          onClick={() => navigate('/courses')}
+          className="bg-gray-700 px-6 py-2 rounded-lg hover:bg-gray-600 transition"
+        >
+          Return to Base
+        </button>
+      </div>
+    );
   }
-  
-  const unitMissions = getMissionsByUnit(mission?.unitId);
-  const currentIndexInUnit = unitMissions ? unitMissions.findIndex(m => m.id === mission.id) : -1;
-  const nextMission = (unitMissions && currentIndexInUnit >= 0) ? unitMissions[currentIndexInUnit + 1] : null;
-  
+
+  if (!mission || !mission.tasks) return <MissionSkeleton />;
+
   const currentTask = mission.tasks[taskIndex];
-
-  const checkAnswerStrictness = (userAns, correctAns) => {
-    if (!userAns || !correctAns) return false;
-    const clean = (str) => String(str).toLowerCase().replace(/^[\w\d]+[\)\.]\s*/, '').replace(/[^\w]/g, '').trim();
-    const u = clean(userAns);
-    const c = clean(correctAns);
-    return u === c || u.includes(c) || c.includes(u);
-  };
-
-  const handleAskLumen = async () => {
-    if (isAiLoading) return; 
-    setIsAiLoading(true);
-    setAiHelp(""); 
-
-    const userAge = user?.stats?.age || 10;
-    let prompt = "";
-    if (currentTask.type === 'theory') {
-        prompt = `I am reading a lesson about: "${currentTask.content}". Can you explain this to me in a fun, simple way with a real-life example?`;
-    } else {
-        prompt = `I am stuck on this quiz question: "${currentTask.question}". The options are ${JSON.stringify(currentTask.options)}. Can you give me a helpful hint about the concept? Don't tell me the answer directly, just guide me!`;
-    }
-
-    try {
-        const response = await sendMessageToAi(prompt, userAge, []);
-        setAiHelp(response.text);
-    } catch (error) {
-        setAiHelp("Oops! My brain froze. Try asking again later! 🧊");
-    } finally {
-        setIsAiLoading(false);
-    }
-  };
 
   const handleCheck = () => {
     if (!selectedOption) return;
-    
-    const correct = checkAnswerStrictness(selectedOption, currentTask.correct);
-    
+    const correct = isAnswerCorrect(selectedOption, currentTask.correct);
     setIsCorrect(correct);
-    if (correct) setScore(prev => prev + 1);
+    if (correct) setScore((s) => s + 1);
+  };
+
+  const finishMission = () => {
+    const finalScore = mission.type === 'theory' ? mission.tasks.length : score;
+    if (mission.type === 'theory') setScore(finalScore);
+
+    setIsFinished(true);
+
+    if (user?.uid) {
+      const { stars, xpEarned } = calculateRewards(mission, finalScore);
+      dispatch(
+        saveGameProgress({
+          uid: user.uid,
+          missionId: mission.id,
+          result: {
+            status: 'completed',
+            stars,
+            score: finalScore,
+            completedAt: new Date().toISOString(),
+          },
+          xpGained: xpEarned,
+        })
+      );
+    }
   };
 
   const handleNext = () => {
     if (taskIndex + 1 < mission.tasks.length) {
-      setTaskIndex(prev => prev + 1);
+      setTaskIndex((i) => i + 1);
       setSelectedOption(null);
       setIsCorrect(null);
-      setAiHelp(""); 
+      dispatch(clearAiHelp());
     } else {
       finishMission();
     }
   };
 
-  const finishMission = () => {
-    let finalScore = score;
-    if (mission.type === 'theory') {
-        finalScore = mission.tasks.length;
-        setScore(finalScore); 
-    }
-
-    setIsFinished(true);
-    
-    let stars = 1;
-    const percentage = mission.tasks.length > 0 ? (finalScore / mission.tasks.length) : 0;
-    if (percentage === 1) stars = 3;
-    else if (percentage >= 0.5) stars = 2;
-
-    const resultData = {
-        status: 'completed',
-        stars: stars,
-        score: finalScore,
-        completedAt: new Date().toISOString()
-    };
-
-    if (user && user.uid) {
-        const xpEarned = (mission.xpReward || 10) + (finalScore * 2);
-        dispatch(saveGameProgress({
-            uid: user.uid,
-            missionId: mission.id,
-            result: resultData,
-            xpGained: xpEarned
-        }));
-    }
-  };
-
-  const handleExit = () => {
-    const unit = getUnitById(mission.unitId);
-    if (unit) {
-        navigate(`/courses/${unit.subjectId}`);
-    } else {
-        navigate('/courses');
-    }
+  const handleAskLumen = () => {
+    dispatch(
+      askLumenHelp({
+        prompt: generateAiPrompt(currentTask),
+        userAge: user?.stats?.age || 10,
+      })
+    );
   };
 
   return (
-    <MissionView 
+    <MissionView
       mission={mission}
-      nextMissionId={nextMission?.id}
+      nextMissionId={null}
       currentTask={currentTask}
       totalTasks={mission.tasks.length}
       currentIndex={taskIndex}
@@ -155,13 +124,13 @@ export default function MissionPresenter() {
       isCorrect={isCorrect}
       onCheck={handleCheck}
       onNext={handleNext}
-      onTheoryDone={handleNext} 
+      onTheoryDone={handleNext}
       onAskLumen={handleAskLumen}
       aiHelp={aiHelp}
-      isAiLoading={isAiLoading}
+      isAiLoading={aiHelpStatus === 'loading'}
       isFinished={isFinished}
       score={score}
-      onExit={handleExit} 
+      onExit={() => navigate(mission.courseId ? `/courses/${mission.courseId}` : '/courses')}
     />
   );
 }

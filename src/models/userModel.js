@@ -1,3 +1,4 @@
+
 import { auth, db } from "../firebase/firebaseConfig";
 import { 
   signInWithEmailAndPassword, 
@@ -12,93 +13,67 @@ import {
 } from "firebase/firestore";
 
 export const loginUser = async (email, password) => {
-  try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const uid = userCredential.user.uid;
-    
-    const userProfile = await getUserProfile(uid);
+  const userCredential = await signInWithEmailAndPassword(auth, email, password);
+  const uid = userCredential.user.uid;
+  
+  const userProfile = await getUserProfile(uid);
 
-    if (!userProfile) {
-        return { success: false, error: "User profile not found." };
-    }
-
-    return { success: true, user: userProfile };
-  } catch (error) {
-    return { success: false, error: error.message };
+  if (!userProfile) {
+      throw new Error("User profile not found in database.");
   }
+
+  return userProfile; 
 };
 
 export const registerUser = async (email, password, nickname) => {
-  try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const uid = userCredential.user.uid;
+  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+  const uid = userCredential.user.uid;
 
-    const newUserProfile = {
-      uid: uid,
-      nickname: nickname || "New Explorer",
-      email: email,
-      createdAt: new Date().toISOString(),
-      settings: {
-        avatarId: "robot_blue_v1", 
-        theme: "light"
-      },
-      stats: {
-        xp: 0,
-        currentLevel: 1,
-        streakDays: 0,
-        totalStars: 0
-      },
-      progress: {} 
-    };
+  const newUserProfile = {
+    uid: uid,
+    nickname: nickname || "New Explorer",
+    email: email,
+    createdAt: new Date().toISOString(),
+    settings: {
+      avatarId: "robot_blue_v1", 
+      theme: "light"
+    },
+    stats: {
+      xp: 0,
+      currentLevel: 1,
+      streakDays: 0,
+      totalStars: 0
+    },
+    progress: {} 
+  };
 
-    await setDoc(doc(db, "users", uid), newUserProfile);
-
-    return { success: true, user: newUserProfile };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
+  await setDoc(doc(db, "users", uid), newUserProfile);
+  return newUserProfile;
 };
 
 export const logoutUser = async () => {
-  try {
-    await signOut(auth);
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
+  await signOut(auth);
+  return true;
 };
 
 export const getUserProfile = async (uid) => {
-  try {
-    const docRef = doc(db, "users", uid);
-    const docSnap = await getDoc(docRef);
+  const docRef = doc(db, "users", uid);
+  const docSnap = await getDoc(docRef);
 
-    if (docSnap.exists()) {
-      const data = docSnap.data();
-
-      return {
-
-        uid: docSnap.id, 
-        
-        ...data,
-        
-        createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt
-      };
-    } else {
-      console.error("No such user document!");
-      return null;
-    }
-  } catch (error) {
-    console.error("Error fetching user:", error);
+  if (docSnap.exists()) {
+    const data = docSnap.data();
+    return {
+      uid: docSnap.id, 
+      ...data,
+      createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt
+    };
+  } else {
     return null;
   }
 };
 
 export const updateUserInDb = async (uid, dataToUpdate) => {
-  try {
-    const userRef = doc(db, "users", uid);
-    await updateDoc(userRef, dataToUpdate);
-  } catch (error) {
-    console.error("Error updating DB:", error);
-  }
+  const userRef = doc(db, "users", uid);
+  await updateDoc(userRef, dataToUpdate);
 };
+

@@ -9,7 +9,6 @@ import {
 } from '../store/slices/courseSlice';
 import { saveGameProgress } from '../store/slices/userSlice';
 import MissionView from '../views/pages/MissionView';
-import { MissionSkeleton } from '../views/components/LoadingSkeletons';
 import { isAnswerCorrect, calculateRewards, generateAiPrompt } from '../utils/missionLogic';
 
 export default function MissionPresenter() {
@@ -40,36 +39,24 @@ export default function MissionPresenter() {
     };
   }, [missionId, user?.uid, dispatch]);
 
-  if (loading && !mission) return <MissionSkeleton />;
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center text-white p-4 text-center">
-        <h2 className="text-2xl font-bold text-red-400 mb-2">Mission Not Found ⚠️</h2>
-        <p className="text-gray-400 mb-6">{error}</p>
-        <button
-          onClick={() => navigate('/courses')}
-          className="bg-gray-700 px-6 py-2 rounded-lg hover:bg-gray-600 transition"
-        >
-          Return to Base
-        </button>
-      </div>
-    );
-  }
-
-  if (!mission || !mission.tasks) return <MissionSkeleton />;
-
-  const currentTask = mission.tasks[taskIndex];
+  // --- LOGIC: Calculate Derived State ---
+  // If we are loading and have no mission data yet, we are in "initial load"
+  const isInitialLoading = loading && !mission;
+  
+  // Safe access to current task
+  const currentTask = mission && mission.tasks ? mission.tasks[taskIndex] : null;
+  const totalTasks = mission && mission.tasks ? mission.tasks.length : 0;
 
   const handleCheck = () => {
-    if (!selectedOption) return;
+    if (!selectedOption || !currentTask) return;
     const correct = isAnswerCorrect(selectedOption, currentTask.correct);
     setIsCorrect(correct);
     if (correct) setScore((s) => s + 1);
   };
 
   const finishMission = () => {
-    const finalScore = mission.type === 'theory' ? mission.tasks.length : score;
+    if (!mission) return;
+    const finalScore = mission.type === 'theory' ? totalTasks : score;
     if (mission.type === 'theory') setScore(finalScore);
 
     setIsFinished(true);
@@ -93,7 +80,8 @@ export default function MissionPresenter() {
   };
 
   const handleNext = () => {
-    if (taskIndex + 1 < mission.tasks.length) {
+    if (!mission) return;
+    if (taskIndex + 1 < totalTasks) {
       setTaskIndex((i) => i + 1);
       setSelectedOption(null);
       setIsCorrect(null);
@@ -104,6 +92,7 @@ export default function MissionPresenter() {
   };
 
   const handleAskLumen = () => {
+    if (!currentTask) return;
     dispatch(
       askLumenHelp({
         prompt: generateAiPrompt(currentTask),
@@ -112,25 +101,40 @@ export default function MissionPresenter() {
     );
   };
 
+  const handleExit = () => {
+    if (mission?.courseId) {
+        navigate(`/courses/${mission.courseId}`);
+    } else {
+        navigate('/courses');
+    }
+  };
+
   return (
     <MissionView
+      // Data Props
       mission={mission}
       nextMissionId={null}
       currentTask={currentTask}
-      totalTasks={mission.tasks.length}
+      totalTasks={totalTasks}
       currentIndex={taskIndex}
+      score={score}
+      aiHelp={aiHelp}
+      
+      // State Props
+      isLoading={isInitialLoading} // Passing the boolean, not the component
+      error={error}                // Passing the error string, not the div
+      isAiLoading={aiHelpStatus === 'loading'}
+      isFinished={isFinished}
       selectedOption={selectedOption}
-      onSelectOption={setSelectedOption}
       isCorrect={isCorrect}
+
+      // Event Handlers
+      onSelectOption={setSelectedOption}
       onCheck={handleCheck}
       onNext={handleNext}
       onTheoryDone={handleNext}
       onAskLumen={handleAskLumen}
-      aiHelp={aiHelp}
-      isAiLoading={aiHelpStatus === 'loading'}
-      isFinished={isFinished}
-      score={score}
-      onExit={() => navigate(mission.courseId ? `/courses/${mission.courseId}` : '/courses')}
+      onExit={handleExit}
     />
   );
 }

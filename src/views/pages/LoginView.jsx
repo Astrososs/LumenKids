@@ -69,7 +69,7 @@ const LoginView = ({
           <button
             type="submit" 
             disabled={isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-xl transition transform hover:scale-105 disabled:opacity-50 mt-4 shadow-lg border border-blue-500"
+            className="cursor-pointer w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-xl transition transform hover:scale-105 disabled:opacity-50 mt-4 shadow-lg border border-blue-500"
           >
             {isLoading ? "Loading..." : (isRegistering ? "Sign Up" : "Login")}
           </button>
@@ -78,7 +78,7 @@ const LoginView = ({
             <button 
                 type="button" 
                 onClick={() => setIsRegistering(!isRegistering)}
-                className="text-sm text-blue-400 hover:text-white underline"
+                className="cursor-pointer text-sm text-blue-400 hover:text-white underline"
             >
                 {isRegistering ? "Already have an account? Login" : "New here? Create Account"}
             </button>

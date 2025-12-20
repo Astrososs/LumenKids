@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 
-
 const DashboardView = ({ user, onLogout }) => {
   const navigate = useNavigate();
 
@@ -25,7 +24,7 @@ const DashboardView = ({ user, onLogout }) => {
         
         <button 
             onClick={onLogout}
-            className="px-6 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/50 rounded-full transition text-sm font-bold"
+            className="cursor-pointer px-6 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/50 rounded-full transition text-sm font-bold"
         >
             Logout
         </button>

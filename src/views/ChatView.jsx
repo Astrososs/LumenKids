@@ -28,7 +28,7 @@ const ChatView = ({
         <div className="flex items-center gap-3">
            <button 
              onClick={onBack}
-             className="p-2 -ml-2 rounded-full hover:bg-gray-700 text-gray-300 hover:text-white transition"
+             className="cursor-pointer p-2 -ml-2 rounded-full hover:bg-gray-700 text-gray-300 hover:text-white transition"
              title="Go Back"
            >
              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
@@ -44,7 +44,7 @@ const ChatView = ({
 
         <button 
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="bg-gray-700 text-white px-3 py-1.5 rounded-lg text-sm border border-gray-600 active:scale-95 transition font-medium"
+          className="cursor-pointer bg-gray-700 text-white px-3 py-1.5 rounded-lg text-sm border border-gray-600 active:scale-95 transition font-medium"
         >
           {isMobileMenuOpen ? "Close" : "History"}
         </button>
@@ -60,7 +60,7 @@ const ChatView = ({
         <div className="p-4 mt-16 md:mt-0"> 
           <button 
             onClick={handleNewChatClick}
-            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-bold transition shadow-lg border border-blue-400 active:scale-95"
+            className="cursor-pointer w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-bold transition shadow-lg border border-blue-400 active:scale-95"
           >
             <span className="text-xl">+</span> New Chat
           </button>
@@ -77,7 +77,7 @@ const ChatView = ({
             <div 
               key={chat.id}
               onClick={() => onSelectChat(chat.id)}
-              className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition border ${
+              className={`cursor-pointer group flex items-center justify-between p-3 rounded-lg transition border ${
                 chat.id === currentChatId 
                   ? 'bg-gray-700 border-blue-500/50' 
                   : 'border-transparent hover:bg-gray-700/50'
@@ -92,7 +92,7 @@ const ChatView = ({
               
               <button 
                 onClick={(e) => onDeleteChat(e, chat.id)}
-                className="md:opacity-0 md:group-hover:opacity-100 text-gray-500 hover:text-red-400 transition px-2"
+                className="cursor-pointer md:opacity-0 md:group-hover:opacity-100 text-gray-500 hover:text-red-400 transition px-2"
               >
                 🗑
               </button>
@@ -160,7 +160,7 @@ const ChatView = ({
             <button 
               type="submit"
               disabled={loading || !input.trim()}
-              className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 md:px-6 rounded-xl transition disabled:opacity-50 font-bold shadow-lg flex items-center justify-center active:scale-95"
+              className="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 md:px-6 rounded-xl transition disabled:opacity-50 font-bold shadow-lg flex items-center justify-center active:scale-95"
             >
               🚀
             </button>

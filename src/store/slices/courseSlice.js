@@ -20,8 +20,25 @@ export const createCourse = createAsyncThunk(
   'courses/create',
   async ({ uid, topic, age }, { rejectWithValue }) => {
     try {
-      const d = await generateCourseWithAi(topic, age);
-      return await saveCourseToDb(uid, d);
+      const courseData = await generateCourseWithAi(topic, age);
+      
+      const timestamp = Date.now();
+      courseData.createdAt = new Date().toISOString();
+      
+      if (courseData.units) {
+        courseData.units.forEach((unit, uIdx) => {
+          unit.id = `u_${timestamp}_${uIdx}`;
+          
+          if (unit.missions) {
+            unit.missions.forEach((mission, mIdx) => {
+              mission.id = `m_${timestamp}_${uIdx}_${mIdx}`; 
+              if (!mission.tasks) mission.tasks = [];
+            });
+          }
+        });
+      }
+
+      return await saveCourseToDb(uid, courseData);
     } catch (e) {
       return rejectWithValue(e.message);
     }
@@ -128,10 +145,8 @@ const courseSlice = createSlice({
     list: [],
     activeCourse: null,
     activeMission: null,
-
     aiHelp: '',
     aiHelpStatus: 'idle', 
-
     loading: false,
     error: null,
   },
@@ -185,7 +200,6 @@ const courseSlice = createSlice({
         state.activeMission = action.payload;
         state.loading = false;
       })
-
       .addCase(askLumenHelp.pending, (state) => {
         state.aiHelpStatus = 'loading';
         state.aiHelp = '';
@@ -198,7 +212,6 @@ const courseSlice = createSlice({
         state.aiHelpStatus = 'failed';
         state.aiHelp = action.payload || 'Oops! My brain froze. Try again later! 🧊';
       })
-
       .addMatcher(
         (action) => action.type.endsWith('/pending') && action.type !== askLumenHelp.pending.type,
         (state) => {

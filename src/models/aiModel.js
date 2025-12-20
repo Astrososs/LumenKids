@@ -26,24 +26,46 @@ export const generateCourseWithAi = async (topic, age) => {
     
     const prompt = `
       Create a course on "${topic}" for a ${age}-year-old.
-      Return VALID JSON ONLY.
+      Return VALID JSON ONLY. No markdown formatting.
+      
       Structure:
       {
         "title": "Course Title",
-        "description": "...",
+        "description": "Short exciting description",
         "icon": "Emoji",
         "color": "bg-blue-600",
         "units": [
           {
-            "id": "u1", "title": "Unit 1", "description": "...", 
+            "id": "u1", "title": "Unit Title", "description": "...", 
             "missions": [
-               { "id": "m1", "title": "Lesson", "type": "theory", "xpReward": 10, "tasks": [...] },
-               { "id": "m2", "title": "Quiz", "type": "quiz", "xpReward": 20, "tasks": [...] }
+               { 
+                 "id": "m1", "title": "Lesson Title", "type": "theory", "xpReward": 10, 
+                 "tasks": [
+                    { "type": "theory", "content": "The educational content text goes here." }
+                 ] 
+               },
+               { 
+                 "id": "m2", "title": "Quiz Title", "type": "quiz", "xpReward": 20, 
+                 "tasks": [
+                    { 
+                      "type": "quiz", 
+                      "question": "The quiz question text?", 
+                      "options": ["Option A", "Option B"], 
+                      "correct": "Option A" 
+                    }
+                 ] 
+               }
             ]
           }
         ]
       }
+      
+      IMPORTANT RULES:
+      1. For 'theory' tasks, YOU MUST USE the key "content".
+      2. For 'quiz' tasks, YOU MUST USE the key "question".
+      3. Ensure "correct" matches one of the "options" exactly.
     `;
+    
     const result = await model.generateContent(prompt);
     const text = result.response.text().replace(/```json|```/g, '').trim();
     return JSON.parse(text);
@@ -52,7 +74,6 @@ export const generateCourseWithAi = async (topic, age) => {
     throw new Error("Failed to generate course.");
   }
 };
-
 
 export const refineCourseWithAi = async (currentCourse, userInstruction, age) => {
   try {
@@ -72,6 +93,7 @@ export const refineCourseWithAi = async (currentCourse, userInstruction, age) =>
       2. You can Add/Remove/Reorder Units or Missions.
       3. KEEP the same JSON structure.
       4. Ensure "correct" answers match "options" exactly.
+      5. Use "content" for theory tasks and "question" for quiz tasks.
       
       RETURN VALID JSON ONLY.
     `;

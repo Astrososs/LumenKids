@@ -1,5 +1,14 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { loginUser, registerUser, logoutUser, updateUserInDb } from '../../models/userModel';
+import { 
+  loginUser, 
+  registerUser, 
+  logoutUser, 
+  updateUserInDb, 
+  findUserByEmail, 
+  addFriendToDb, 
+  removeFriendFromDb 
+} from '../../models/userModel';
+
 
 export const authenticateUser = createAsyncThunk(
   'user/authenticate',
@@ -53,6 +62,35 @@ export const saveGameProgress = createAsyncThunk(
   }
 );
 
+export const addFriendThunk = createAsyncThunk(
+  'user/addFriend',
+  async ({ uid, friendEmail }, { rejectWithValue }) => {
+    try {
+      const friend = await findUserByEmail(friendEmail);
+      if (!friend) throw new Error("User not found!");
+      if (friend.uid === uid) throw new Error("You cannot add yourself!");
+
+      await addFriendToDb(uid, friend.uid);
+      return friend; 
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+export const removeFriendThunk = createAsyncThunk(
+  'user/removeFriend',
+  async ({ uid, friendUid }, { rejectWithValue }) => {
+    try {
+      await removeFriendFromDb(uid, friendUid);
+      return friendUid;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+
 const userSlice = createSlice({
   name: 'user',
   initialState: {
@@ -87,6 +125,20 @@ const userSlice = createSlice({
            state.data.stats.xp = action.payload.xp;
            state.data.stats.totalStars = action.payload.stars;
            state.data.stats.currentLevel = action.payload.level;
+        }
+      })
+
+      .addCase(addFriendThunk.fulfilled, (state, action) => {
+        if (state.data) {
+          if (!state.data.friends) state.data.friends = [];
+          if (!state.data.friends.includes(action.payload.uid)) {
+            state.data.friends.push(action.payload.uid);
+          }
+        }
+      })
+      .addCase(removeFriendThunk.fulfilled, (state, action) => {
+        if (state.data?.friends) {
+          state.data.friends = state.data.friends.filter(id => id !== action.payload);
         }
       });
   }

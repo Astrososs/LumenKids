@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import Swal from 'sweetalert2'; // <--- IMPORT SWEETALERT
+import Swal from 'sweetalert2'; 
 import { loadActiveCourse, updateCourse, modifyCourseWithAi } from '../store/slices/courseSlice';
 import SubjectView from '../views/pages/SubjectView';
+// Import the locking logic [cite: 11]
+import { getUnitLockStatus } from '../utils/missionLogic';
 
 export default function SubjectPresenter() {
   const { subjectId } = useParams();
@@ -48,7 +50,6 @@ export default function SubjectPresenter() {
   };
 
   const handleDeleteUnit = async (index) => {
-    // --- REPLACED CONFIRM WITH SWEETALERT ---
     const result = await Swal.fire({
         title: 'Delete Unit?',
         text: "This unit will be removed from the course layout.",
@@ -71,7 +72,6 @@ export default function SubjectPresenter() {
     await dispatch(updateCourse({ uid: user.uid, courseId: activeCourse.id, courseData: editedCourse }));
     setIsEditing(false);
     
-    // Success Toast
     Swal.fire({
         icon: 'success',
         title: 'Changes Saved!',
@@ -106,8 +106,34 @@ export default function SubjectPresenter() {
     });
   };
 
+  /**
+   * ENFORCES UNIT LOCKING
+   * Checks progress before navigating to ensure the previous exam is passed. [cite: 10, 11]
+   */
   const handleSelectMission = (missionId) => {
     if (isEditing) return; 
+
+    // Find the index of the unit containing this mission
+    const currentUnits = activeCourse?.units || [];
+    const unitIndex = currentUnits.findIndex(u => 
+      u.missions?.some(m => m.id === missionId)
+    );
+
+    // Validate lock status [cite: 11]
+    const isLocked = getUnitLockStatus(unitIndex, currentUnits, user?.progress || {});
+
+    if (isLocked) {
+      Swal.fire({
+        title: 'Unit Locked! 🔒',
+        text: 'You need to pass the previous unit\'s Boss Exam to unlock this mission!',
+        icon: 'error',
+        confirmButtonColor: '#2563eb',
+        background: '#1f2937',
+        color: '#fff'
+      });
+      return;
+    }
+
     navigate(`/mission/${missionId}`);
   };
 

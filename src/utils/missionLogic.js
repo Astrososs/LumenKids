@@ -24,3 +24,21 @@ export function generateAiPrompt(task) {
     }
     return `I am stuck on this quiz question: "${task.question}". The options are ${JSON.stringify(task.options)}. Can you give me a helpful hint without giving the answer?`;
 }
+
+
+export function getUnitLockStatus(unitIndex, units, completedMissions) {
+  if (unitIndex === 0) return false; 
+
+  const previousUnit = units[unitIndex - 1];
+  
+  const examMission = previousUnit.missions?.find(m => m.type === 'exam');
+  
+  
+  if (examMission) {
+    return !completedMissions[examMission.id];
+  }
+  
+  
+  const lastMission = previousUnit.missions[previousUnit.missions.length - 1];
+  return !completedMissions[lastMission?.id];
+}

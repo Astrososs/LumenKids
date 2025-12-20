@@ -45,11 +45,11 @@ export const generateCourseWithAi = async (topic, age) => {
                  ] 
                },
                { 
-                 "id": "m2", "title": "Quiz Title", "type": "quiz", "xpReward": 20, 
+                 "id": "m2", "title": "Unit Exam", "type": "exam", "xpReward": 50, 
                  "tasks": [
                     { 
                       "type": "quiz", 
-                      "question": "The quiz question text?", 
+                      "question": "The exam question?", 
                       "options": ["Option A", "Option B"], 
                       "correct": "Option A" 
                     }
@@ -61,9 +61,11 @@ export const generateCourseWithAi = async (topic, age) => {
       }
       
       IMPORTANT RULES:
-      1. For 'theory' tasks, YOU MUST USE the key "content".
-      2. For 'quiz' tasks, YOU MUST USE the key "question".
-      3. Ensure "correct" matches one of the "options" exactly.
+      1. Every Unit MUST end with a mission of "type": "exam". This is mandatory for unit locking.
+      2. For 'theory' tasks, YOU MUST USE the key "content".
+      3. For 'quiz' tasks, YOU MUST USE the key "question".
+      4. Ensure "correct" matches one of the "options" exactly.
+      5. The "exam" mission should be more challenging and reward more XP (e.g., 50 XP).
     `;
     
     const result = await model.generateContent(prompt);
@@ -90,7 +92,7 @@ export const refineCourseWithAi = async (currentCourse, userInstruction, age) =>
 
       TASK:
       1. Modify the JSON to fulfill the instruction.
-      2. You can Add/Remove/Reorder Units or Missions.
+      2. Every Unit MUST maintain a mission of "type": "exam" at the end of its missions list.
       3. KEEP the same JSON structure.
       4. Ensure "correct" answers match "options" exactly.
       5. Use "content" for theory tasks and "question" for quiz tasks.

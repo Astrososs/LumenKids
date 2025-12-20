@@ -1,8 +1,38 @@
 import { CourseCardSkeleton } from '../components/LoadingSkeletons';
 
-const CoursesView = ({ subjects, onSelectSubject, onDeleteSubject, isLoading, isCreating }) => {
+const CoursesView = ({ 
+  subjects, onSelectSubject, onDeleteSubject, 
+  isLoading, isCreating, 
+  topic, onTopicChange, onCreateCourse, error 
+}) => {
   return (
     <div className="p-6 max-w-7xl mx-auto min-h-screen">
+      
+    
+      <div className="mb-10 p-8 bg-gray-800 rounded-2xl border border-gray-700 shadow-xl">
+        <h2 className="text-2xl text-white font-bold mb-4 flex items-center gap-2">
+            ✨ Magic Course Generator
+        </h2>
+        <div className="flex flex-col md:flex-row gap-4">
+          <input 
+            value={topic}
+            onChange={(e) => onTopicChange(e.target.value)}
+            placeholder="e.g. Dinosaurs, Black Holes, Pirates..."
+            className="flex-1 p-4 rounded-xl bg-gray-700 text-white border border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none transition"
+            disabled={isCreating} 
+          />
+          <button 
+            onClick={onCreateCourse}
+            disabled={isCreating || !topic.trim()}
+            className="cursor-pointer bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-bold transition transform hover:scale-105 disabled:opacity-50 disabled:scale-100"
+          >
+            {isCreating ? "Generating..." : "Create Course 🚀"}
+          </button>
+        </div>
+        {error && <p className="text-red-400 mt-3 font-medium">⚠️ {error}</p>}
+      </div>
+      
+
       <h1 className="text-3xl font-bold text-white mb-2">Explore Courses 🔭</h1>
       <p className="text-gray-400 mb-8">Choose a subject to start your adventure!</p>
 
@@ -41,7 +71,7 @@ const CoursesView = ({ subjects, onSelectSubject, onDeleteSubject, isLoading, is
                     e.stopPropagation();
                     onDeleteSubject(subject.id);
                 }}
-                className="absolute top-4 right-4 z-20 text-gray-500 hover:text-red-500 p-2 rounded-full hover:bg-gray-700 transition"
+                className="cursor-pointer absolute top-4 right-4 z-20 text-gray-500 hover:text-red-500 p-2 rounded-full hover:bg-gray-700 transition"
                 title="Delete Course"
             >
                 🗑️

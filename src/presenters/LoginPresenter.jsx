@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2'; 
 import { authenticateUser } from '../store/slices/userSlice'; 
 import LoginView from '../views/pages/LoginView';
 
@@ -20,7 +21,15 @@ export default function LoginPresenter() {
 
   const handleAuth = () => {
     if (!email || !password) {
-        alert("Please enter email and password");
+        
+        Swal.fire({
+          icon: 'warning',
+          title: 'Missing Details',
+          text: 'Please enter both your email and password to continue!',
+          confirmButtonColor: '#2563eb', 
+          background: '#1f2937', 
+          color: '#fff'
+        });
         return;
     }
 

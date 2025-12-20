@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2'; 
 import {
   handleUserMessage,
   subscribeToChatsThunk,
@@ -48,7 +49,6 @@ export default function ChatPresenter() {
   }, [chats, currentChatId]);
 
   const resolvedChatId = (currentChatId && idMap[currentChatId]) || currentChatId;
-
   const activeChat = chats.find((c) => c.id === resolvedChatId);
   const messages = activeChat ? activeChat.messages : [];
 
@@ -56,7 +56,6 @@ export default function ChatPresenter() {
 
   const handleSend = async () => {
     if (!input.trim() || !user?.uid) return;
-
     const userMsg = input;
     setInput('');
 
@@ -76,8 +75,6 @@ export default function ChatPresenter() {
         history: messages,
       })
     );
-
-
   };
 
   const handleNewChat = () => {
@@ -95,11 +92,34 @@ export default function ChatPresenter() {
     e.stopPropagation();
     if (!user?.uid) return;
 
-    if (window.confirm('Delete this conversation?')) {
-      await dispatch(deleteChatThunk({ uid: user.uid, chatId }));
+   
+    const result = await Swal.fire({
+      title: 'Delete Conversation?',
+      text: "You won't be able to undo this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444', 
+      cancelButtonColor: '#374151',
+      confirmButtonText: 'Yes, delete it!',
+      background: '#1f2937',
+      color: '#fff'
+    });
 
+    if (result.isConfirmed) {
+      await dispatch(deleteChatThunk({ uid: user.uid, chatId }));
       const resolved = (currentChatId && idMap[currentChatId]) || currentChatId;
       if (resolved === chatId) setCurrentChatId(null);
+      
+   
+      Swal.fire({
+         title: 'Deleted!',
+         text: 'The chat has been removed.',
+         icon: 'success',
+         timer: 1500,
+         showConfirmButton: false,
+         background: '#1f2937',
+         color: '#fff'
+      });
     }
   };
 

@@ -1,7 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2'; 
 import { loadCourses, createCourse, setActiveCourse, deleteCourse } from '../store/slices/courseSlice';
 import CoursesView from '../views/pages/CoursesView';
 
@@ -31,6 +31,17 @@ export default function CoursesPresenter() {
     }));
     setIsCreating(false);
     setTopic("");
+    
+    Swal.fire({
+        icon: 'success',
+        title: 'Course Created!',
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        background: '#1f2937',
+        color: '#fff'
+    });
   };
 
   const handleSelectCourse = (courseId) => {
@@ -39,43 +50,42 @@ export default function CoursesPresenter() {
   };
 
   const handleDeleteCourse = async (courseId) => {
-    if (window.confirm("Are you sure you want to delete this course? All progress will be lost!")) {
+    const result = await Swal.fire({
+        title: 'Delete Course?',
+        text: "All your progress in this course will be lost forever!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#374151',
+        confirmButtonText: 'Delete Course',
+        background: '#1f2937',
+        color: '#fff'
+    });
+
+    if (result.isConfirmed) {
         await dispatch(deleteCourse({ uid: user.uid, courseId }));
+        
+        Swal.fire({
+            title: 'Deleted!',
+            text: 'Course has been removed.',
+            icon: 'success',
+            background: '#1f2937',
+            color: '#fff'
+        });
     }
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-10 p-8 bg-gray-800 rounded-2xl border border-gray-700 shadow-xl">
-        <h2 className="text-2xl text-white font-bold mb-4 flex items-center gap-2">
-            ✨ Magic Course Generator
-        </h2>
-        <div className="flex flex-col md:flex-row gap-4">
-          <input 
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            placeholder="e.g. Dinosaurs, Black Holes, Pirates..."
-            className="flex-1 p-4 rounded-xl bg-gray-700 text-white border border-gray-600 focus:ring-2 focus:ring-blue-500 outline-none transition"
-            disabled={isCreating} 
-          />
-          <button 
-            onClick={handleCreate}
-            disabled={isCreating || !topic.trim()}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-xl font-bold transition transform hover:scale-105 disabled:opacity-50 disabled:scale-100"
-          >
-            {isCreating ? "Generating..." : "Create Course 🚀"}
-          </button>
-        </div>
-        {error && <p className="text-red-400 mt-3 font-medium">⚠️ {error}</p>}
-      </div>
-
-      <CoursesView 
-        subjects={courses} 
-        isLoading={loading}
-        isCreating={isCreating}
-        onSelectSubject={handleSelectCourse} 
-        onDeleteSubject={handleDeleteCourse}
-      />
-    </div>
+    <CoursesView 
+      subjects={courses} 
+      isLoading={loading}
+      isCreating={isCreating}
+      error={error}
+      topic={topic}
+      onTopicChange={setTopic}
+      onCreateCourse={handleCreate}
+      onSelectSubject={handleSelectCourse} 
+      onDeleteSubject={handleDeleteCourse}
+    />
   );
 }

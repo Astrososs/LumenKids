@@ -1,4 +1,3 @@
-
 import { auth, db } from "../firebase/firebaseConfig";
 import { 
   signInWithEmailAndPassword, 
@@ -9,19 +8,23 @@ import {
   doc, 
   getDoc, 
   setDoc, 
-  updateDoc 
+  updateDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+  arrayUnion,
+  arrayRemove 
 } from "firebase/firestore";
 
 export const loginUser = async (email, password) => {
   const userCredential = await signInWithEmailAndPassword(auth, email, password);
   const uid = userCredential.user.uid;
-  
   const userProfile = await getUserProfile(uid);
 
   if (!userProfile) {
       throw new Error("User profile not found in database.");
   }
-
   return userProfile; 
 };
 
@@ -44,7 +47,8 @@ export const registerUser = async (email, password, nickname) => {
       streakDays: 0,
       totalStars: 0
     },
-    progress: {} 
+    progress: {},
+    friends: [] 
   };
 
   await setDoc(doc(db, "users", uid), newUserProfile);
@@ -67,9 +71,8 @@ export const getUserProfile = async (uid) => {
       ...data,
       createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt
     };
-  } else {
-    return null;
   }
+  return null;
 };
 
 export const updateUserInDb = async (uid, dataToUpdate) => {
@@ -77,3 +80,30 @@ export const updateUserInDb = async (uid, dataToUpdate) => {
   await updateDoc(userRef, dataToUpdate);
 };
 
+export const findUserByEmail = async (email) => {
+  const q = query(collection(db, "users"), where("email", "==", email.toLowerCase()));
+  const querySnapshot = await getDocs(q);
+  if (querySnapshot.empty) return null;
+  const foundDoc = querySnapshot.docs[0];
+  return { uid: foundDoc.id, ...foundDoc.data() };
+};
+
+export const addFriendToDb = async (uid, friendUid) => {
+  const userRef = doc(db, "users", uid);
+  await updateDoc(userRef, {
+    friends: arrayUnion(friendUid) 
+  });
+};
+
+export const removeFriendFromDb = async (uid, friendUid) => {
+  const userRef = doc(db, "users", uid);
+  await updateDoc(userRef, {
+    friends: arrayRemove(friendUid)
+  });
+};
+
+export const fetchMultipleUserProfiles = async (uids) => {
+  if (!uids || uids.length === 0) return [];
+  const profiles = await Promise.all(uids.map(uid => getUserProfile(uid)));
+  return profiles.filter(p => p !== null);
+};

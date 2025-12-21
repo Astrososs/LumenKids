@@ -37,7 +37,7 @@ export default function SidebarPresenter() {
         { label: "Dashboard", path: "/", icon: "🏠" },
         { label: "Courses", path: "/courses", icon: "📚" },
         { label: "AI Buddy", path: "/chat", icon: "🤖" },
-        { label: "Friends", path: "/social", icon: "👥" }, 
+         
       ]}
       onNavigate={handleNavigate}
       onLogout={handleLogout}

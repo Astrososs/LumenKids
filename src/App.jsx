@@ -62,7 +62,7 @@ function AppContent() {
           { path: '/', label: 'Dashboard', icon: '🚀' },
           { path: '/courses', label: 'Courses', icon: '🔭' },
           { path: '/chat', label: 'Lumen Chat', icon: '🤖' },
-          { path: '/social', label: 'Friends', icon: '👥' }, 
+         
         ]}
         onNavigate={(path) => {
             navigate(path);       
@@ -82,7 +82,7 @@ function AppContent() {
             <Route path="/mission/:missionId" element={<MissionPresenter />} />
             <Route path="/chat" element={<ChatPresenter />} />
             
-            <Route path="/social" element={<SocialPresenter />} /> 
+           
             
             <Route path="*" element={<Navigate to="/" />} />
          </Routes>

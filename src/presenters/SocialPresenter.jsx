@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { addFriendThunk, removeFriendThunk } from '../store/slices/userSlice';
 import { fetchMultipleUserProfiles } from '../models/userModel';
-import SocialView from '../views/pages/SocialView';
 import Swal from 'sweetalert2';
 
 export default function SocialPresenter() {

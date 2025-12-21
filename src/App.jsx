@@ -6,16 +6,14 @@ import { auth } from './firebase/firebaseConfig';
 import { loginSuccess, logout, setLoading } from './store/slices/userSlice';
 import { getUserProfile } from './models/userModel';
 
-// Presenters
-import SocialPresenter from './presenters/SocialPresenter'; // Ensure this is imported
+import SocialPresenter from './presenters/SocialPresenter';
 import LoginPresenter from './presenters/LoginPresenter';
 import CoursesPresenter from './presenters/CoursesPresenter'; 
 import SubjectPresenter from './presenters/SubjectPresenter'; 
 import MissionPresenter from './presenters/MissionPresenter'; 
 import ChatPresenter from './presenters/ChatPresenter';
+import DashboardPresenter from './presenters/DashboardPresenter';
 
-// Views
-import DashboardView from './views/pages/DashboardView'; 
 import SidebarView from './views/pages/SidebarView'; 
 
 function AppContent() {
@@ -64,7 +62,7 @@ function AppContent() {
           { path: '/', label: 'Dashboard', icon: '🚀' },
           { path: '/courses', label: 'Courses', icon: '🔭' },
           { path: '/chat', label: 'Lumen Chat', icon: '🤖' },
-          { path: '/social', label: 'Friends', icon: '👥' }, // ADDED: Friend System Navigation
+          { path: '/social', label: 'Friends', icon: '👥' }, 
         ]}
         onNavigate={(path) => {
             navigate(path);       
@@ -77,14 +75,13 @@ function AppContent() {
 
       <main className="flex-1 overflow-x-hidden relative">
          <Routes>
-            <Route path="/" element={<DashboardView user={user} onLogout={() => auth.signOut()} />} />
+            <Route path="/" element={<DashboardPresenter />} />
             
             <Route path="/courses" element={<CoursesPresenter />} />
             <Route path="/courses/:subjectId" element={<SubjectPresenter />} />
             <Route path="/mission/:missionId" element={<MissionPresenter />} />
             <Route path="/chat" element={<ChatPresenter />} />
             
-            {/* ADDED: Friend System Route */}
             <Route path="/social" element={<SocialPresenter />} /> 
             
             <Route path="*" element={<Navigate to="/" />} />

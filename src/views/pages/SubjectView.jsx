@@ -82,7 +82,7 @@ const SubjectView = ({
 
         {units && units.map((unit, index) => {
             
-            const isLocked = getUnitLockStatus(index, units, completedMissions);
+            const isLocked = !isEditing && getUnitLockStatus(index, units, completedMissions);
 
             return (
                 <div key={unit.id || index} className={`space-y-4 animate-fade-in-up transition-all ${isEditing ? 'p-4 border border-dashed border-gray-600 rounded-xl bg-gray-800/30' : ''} ${isLocked ? 'opacity-40 pointer-events-none filter grayscale-[0.8]' : ''}`}>

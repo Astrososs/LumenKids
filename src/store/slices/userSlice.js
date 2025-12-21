@@ -9,7 +9,6 @@ import {
   removeFriendFromDb 
 } from '../../models/userModel';
 
-
 export const authenticateUser = createAsyncThunk(
   'user/authenticate',
   async ({ email, password, nickname, isRegistering }, { rejectWithValue }) => {
@@ -62,6 +61,19 @@ export const saveGameProgress = createAsyncThunk(
   }
 );
 
+export const updateUserProfile = createAsyncThunk(
+  'user/updateProfile',
+  async ({ uid, data }, { rejectWithValue }) => {
+    try {
+      await updateUserInDb(uid, data);
+      return data; 
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+
 export const addFriendThunk = createAsyncThunk(
   'user/addFriend',
   async ({ uid, friendEmail }, { rejectWithValue }) => {
@@ -89,7 +101,6 @@ export const removeFriendThunk = createAsyncThunk(
     }
   }
 );
-
 
 const userSlice = createSlice({
   name: 'user',
@@ -125,6 +136,18 @@ const userSlice = createSlice({
            state.data.stats.xp = action.payload.xp;
            state.data.stats.totalStars = action.payload.stars;
            state.data.stats.currentLevel = action.payload.level;
+        }
+      })
+
+
+      .addCase(updateUserProfile.fulfilled, (state, action) => {
+        if (state.data) {
+
+          state.data = { ...state.data, ...action.payload };
+
+          if (action.payload['stats.age']) {
+             state.data.stats.age = action.payload['stats.age'];
+          }
         }
       })
 

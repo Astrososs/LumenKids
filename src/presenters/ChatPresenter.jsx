@@ -48,8 +48,13 @@ export default function ChatPresenter() {
     }
   }, [chats, currentChatId]);
 
+  useEffect(() => {
+    if (currentChatId && idMap[currentChatId]) {
+      setCurrentChatId(idMap[currentChatId]);
+    }
+  }, [idMap, currentChatId]);
+
   const resolvedChatId = (currentChatId && idMap[currentChatId]) || currentChatId;
-  
   const isCurrentChatLoading = !!(resolvedChatId && loadingChats[resolvedChatId]);
 
   const activeChat = chats.find((c) => c.id === resolvedChatId);
@@ -58,11 +63,10 @@ export default function ChatPresenter() {
   const handleBack = () => navigate('/');
 
   const handleSend = async () => {
-
     if (!input.trim() || !user?.uid || isCurrentChatLoading) return;
     
     const userMsg = input;
-    setInput('');
+    setInput(''); 
 
     const tempChatId = currentChatId ? null : makeTempId();
     if (tempChatId) {
@@ -135,9 +139,7 @@ export default function ChatPresenter() {
       messages={messages}
       input={input}
       setInput={setInput}
-      
-      loading={isCurrentChatLoading}
-      
+      loading={isCurrentChatLoading} 
       isDeleting={isDeleting}
       isSubscribing={isSubscribing}
       error={error}

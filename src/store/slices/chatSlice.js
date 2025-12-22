@@ -53,7 +53,7 @@ export const deleteChatThunk = createAsyncThunk(
 export const handleUserMessage = createAsyncThunk(
   'chat/handleMessage',
   async ({ uid, chatId, tempChatId, message, userAge, history }, thunkAPI) => {
-    const { dispatch, rejectWithValue } = thunkAPI;
+    const { dispatch, rejectWithValue, getState } = thunkAPI;
 
     const localChatId = chatId || tempChatId;
     
@@ -72,7 +72,8 @@ export const handleUserMessage = createAsyncThunk(
       })
     );
 
-    let activeId = chatId;
+    const currentState = getState().chat;
+    let activeId = (chatId && currentState.idMap[chatId]) ? currentState.idMap[chatId] : chatId;
 
     try {
       const isTempId = activeId && activeId.toString().startsWith('temp_');
@@ -100,7 +101,6 @@ export const handleUserMessage = createAsyncThunk(
       } else {
         await sendMessageToChat(uid, activeId, { role: 'user', content: message });
       }
-
       const context = (history || []).map((msg) => ({ role: msg.role, text: msg.content }));
       const aiResponseObj = await sendMessageToAi(message, userAge, context);
 
@@ -110,7 +110,6 @@ export const handleUserMessage = createAsyncThunk(
           message: { role: 'assistant', content: aiResponseObj.text },
         })
       );
-
       await sendMessageToChat(uid, activeId, { role: 'assistant', content: aiResponseObj.text });
 
       return { chatId: activeId, tempChatId: tempChatId };
@@ -209,7 +208,10 @@ const chatSlice = createSlice({
 
       .addCase(handleUserMessage.pending, (state, action) => {
         const { chatId, tempChatId } = action.meta.arg;
-        const targetId = chatId || tempChatId;
+        
+        const resolvedChatId = state.idMap[chatId] || chatId;
+        const targetId = resolvedChatId || tempChatId;
+        
         if (targetId) {
             state.loadingChats[targetId] = true;
         }

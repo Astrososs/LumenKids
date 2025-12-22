@@ -2,6 +2,7 @@ const LoginView = ({
     email, setEmail, 
     password, setPassword, 
     nickname, setNickname,
+    age, setAge,
     isRegistering, setIsRegistering,
     onAuth, isLoading, error 
 }) => {
@@ -32,16 +33,28 @@ const LoginView = ({
         >
           
           {isRegistering && (
-            <div>
-                <label className="text-gray-400 text-xs font-bold ml-1">NICKNAME</label>
-                <input 
-                    type="text" 
-                    placeholder="Captain Cool"
-                    value={nickname}
-                    onChange={e => setNickname(e.target.value)}
-                    className="w-full bg-gray-700 text-white rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-            </div>
+            <>
+                <div>
+                    <label className="text-gray-400 text-xs font-bold ml-1">NICKNAME</label>
+                    <input 
+                        type="text" 
+                        placeholder="Captain Cool"
+                        value={nickname}
+                        onChange={e => setNickname(e.target.value)}
+                        className="w-full bg-gray-700 text-white rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+                <div>
+                    <label className="text-gray-400 text-xs font-bold ml-1">AGE</label>
+                    <input 
+                        type="number" 
+                        placeholder="10"
+                        value={age}
+                        onChange={e => setAge(e.target.value)}
+                        className="w-full bg-gray-700 text-white rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+            </>
           )}
 
           <div>

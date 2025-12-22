@@ -13,6 +13,7 @@ export default function LoginPresenter() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [nickname, setNickname] = useState("");
+  const [age, setAge] = useState("");
   const [isRegistering, setIsRegistering] = useState(false); 
 
   useEffect(() => {
@@ -21,7 +22,6 @@ export default function LoginPresenter() {
 
   const handleAuth = () => {
     if (!email || !password) {
-        
         Swal.fire({
           icon: 'warning',
           title: 'Missing Details',
@@ -33,7 +33,19 @@ export default function LoginPresenter() {
         return;
     }
 
-    dispatch(authenticateUser({ email, password, nickname, isRegistering }));
+    if (isRegistering && (!nickname || !age)) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Missing Details',
+          text: 'Please tell us your name and age to create your cadet profile!',
+          confirmButtonColor: '#2563eb', 
+          background: '#1f2937', 
+          color: '#fff'
+        });
+        return;
+    }
+
+    dispatch(authenticateUser({ email, password, nickname, age, isRegistering }));
   };
 
   return (
@@ -41,6 +53,7 @@ export default function LoginPresenter() {
         email={email} setEmail={setEmail}
         password={password} setPassword={setPassword}
         nickname={nickname} setNickname={setNickname}
+        age={age} setAge={setAge}
         isRegistering={isRegistering} setIsRegistering={setIsRegistering}
         onAuth={handleAuth} 
         isLoading={loading}

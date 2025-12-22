@@ -2,7 +2,7 @@ import { useRef, useEffect } from 'react';
 
 const ChatView = ({ 
   chats, currentChatId, messages, 
-  input, setInput, loading, 
+  input, setInput, loading, error, isSubscribing,
   onSend, onSelectChat, onNewChat, onDeleteChat,
   hasActiveChat,
   isMobileMenuOpen, setIsMobileMenuOpen,
@@ -24,7 +24,6 @@ const ChatView = ({
     <div className="fixed inset-0 md:static md:h-screen md:flex md:flex-row bg-gray-900 text-white overflow-hidden">
       
       <div className="absolute top-0 left-0 w-full h-16 bg-gray-800 border-b border-gray-700 z-40 flex items-center justify-between px-4 shadow-md md:hidden">
-        
         <div className="flex items-center gap-3">
            <button 
              onClick={onBack}
@@ -35,13 +34,11 @@ const ChatView = ({
                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
              </svg>
            </button>
-
            <div className="flex items-center gap-2">
               <span className="text-xl">🤖</span>
               <span className="font-bold text-blue-400">Buddy</span>
            </div>
         </div>
-
         <button 
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           className="cursor-pointer bg-gray-700 text-white px-3 py-1.5 rounded-lg text-sm border border-gray-600 active:scale-95 transition font-medium"
@@ -56,7 +53,6 @@ const ChatView = ({
           md:relative md:translate-x-0 md:w-80 md:flex md:flex-col md:z-0 md:shadow-none
           ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        
         <div className="p-4 mt-16 md:mt-0"> 
           <button 
             onClick={handleNewChatClick}
@@ -67,7 +63,13 @@ const ChatView = ({
         </div>
 
         <div className="flex-1 overflow-y-auto p-2 space-y-2">
-          {chats.length === 0 && (
+          {isSubscribing && (
+            <div className="text-blue-400 text-center text-xs py-2 animate-pulse">
+              Syncing chat history...
+            </div>
+          )}
+          
+          {chats.length === 0 && !isSubscribing && (
             <div className="text-gray-500 text-center text-sm mt-10 px-4">
               No history yet. Start a new chat!
             </div>
@@ -78,9 +80,7 @@ const ChatView = ({
               key={chat.id}
               onClick={() => onSelectChat(chat.id)}
               className={`cursor-pointer group flex items-center justify-between p-3 rounded-lg transition border ${
-                chat.id === currentChatId 
-                  ? 'bg-gray-700 border-blue-500/50' 
-                  : 'border-transparent hover:bg-gray-700/50'
+                chat.id === currentChatId ? 'bg-gray-700 border-blue-500/50' : 'border-transparent hover:bg-gray-700/50'
               }`}
             >
               <div className="flex items-center gap-3 overflow-hidden">
@@ -89,7 +89,6 @@ const ChatView = ({
                   {chat.title || "New Conversation"}
                 </span>
               </div>
-              
               <button 
                 onClick={(e) => onDeleteChat(e, chat.id)}
                 className="cursor-pointer md:opacity-0 md:group-hover:opacity-100 text-gray-500 hover:text-red-400 transition px-2"
@@ -102,14 +101,18 @@ const ChatView = ({
       </div>
 
       {isMobileMenuOpen && (
-        <div 
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden"
-            onClick={() => setIsMobileMenuOpen(false)}
-        ></div>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden" onClick={() => setIsMobileMenuOpen(false)}></div>
       )}
 
       <div className="absolute inset-0 top-16 md:static md:top-0 md:flex-1 flex flex-col bg-gray-900 z-0">
         
+        {error && (
+          <div className="mx-4 mt-4 p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-200 text-sm flex items-center gap-2">
+            <span>⚠️</span>
+            <span>Failed to send message. Please try again.</span>
+          </div>
+        )}
+
         {!hasActiveChat ? (
            <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-6 text-center animate-fade-in">
              <div className="text-6xl mb-4 bg-gray-800 p-6 rounded-full shadow-lg">🤖</div>
@@ -120,13 +123,9 @@ const ChatView = ({
           <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scrollbar-thin scrollbar-thumb-gray-700">
             {messages.map((msg, index) => (
               <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div 
-                  className={`max-w-[85%] md:max-w-[70%] p-3 md:p-4 rounded-2xl shadow-md text-sm md:text-base leading-relaxed ${
-                    msg.role === 'user' 
-                      ? 'bg-blue-600 text-white rounded-br-none' 
-                      : 'bg-gray-700 text-gray-200 rounded-bl-none border border-gray-600'
-                  }`}
-                >
+                <div className={`max-w-[85%] md:max-w-[70%] p-3 md:p-4 rounded-2xl shadow-md text-sm md:text-base leading-relaxed ${
+                  msg.role === 'user' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-700 text-gray-200 rounded-bl-none border border-gray-600'
+                }`}>
                   {msg.content}
                 </div>
               </div>
@@ -146,10 +145,7 @@ const ChatView = ({
         )}
 
         <div className="p-3 md:p-4 bg-gray-800/90 backdrop-blur-md border-t border-gray-700 z-20">
-          <form 
-            onSubmit={(e) => { e.preventDefault(); onSend(); }}
-            className="relative max-w-4xl mx-auto flex gap-2"
-          >
+          <form onSubmit={(e) => { e.preventDefault(); onSend(); }} className="relative max-w-4xl mx-auto flex gap-2">
             <input
               type="text"
               value={input}
@@ -166,7 +162,6 @@ const ChatView = ({
             </button>
           </form>
         </div>
-
       </div>
     </div>
   );

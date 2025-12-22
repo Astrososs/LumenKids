@@ -92,7 +92,6 @@ export default function ChatPresenter() {
     e.stopPropagation();
     if (!user?.uid) return;
 
-   
     const result = await Swal.fire({
       title: 'Delete Conversation?',
       text: "You won't be able to undo this!",
@@ -110,15 +109,14 @@ export default function ChatPresenter() {
       const resolved = (currentChatId && idMap[currentChatId]) || currentChatId;
       if (resolved === chatId) setCurrentChatId(null);
       
-   
       Swal.fire({
-         title: 'Deleted!',
-         text: 'The chat has been removed.',
-         icon: 'success',
-         timer: 1500,
-         showConfirmButton: false,
-         background: '#1f2937',
-         color: '#fff'
+          title: 'Deleted!',
+          text: 'The chat has been removed.',
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false,
+          background: '#1f2937',
+          color: '#fff'
       });
     }
   };

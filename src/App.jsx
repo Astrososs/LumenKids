@@ -1,12 +1,9 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from './firebase/firebaseConfig';
-import { loginSuccess, logout, setLoading } from './store/slices/userSlice';
-import { getUserProfile } from './models/userModel';
 
-import SocialPresenter from './presenters/SocialPresenter';
+import { signOutUser, initAuth } from './store/slices/userSlice'; 
+
 import LoginPresenter from './presenters/LoginPresenter';
 import CoursesPresenter from './presenters/CoursesPresenter'; 
 import SubjectPresenter from './presenters/SubjectPresenter'; 
@@ -25,19 +22,7 @@ function AppContent() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   useEffect(() => {
-    dispatch(setLoading(true));
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        const profile = await getUserProfile(currentUser.uid);
-        if (profile) {
-          dispatch(loginSuccess(profile));
-        }
-      } else {
-        dispatch(logout());
-      }
-      dispatch(setLoading(false));
-    });
-    return () => unsubscribe();
+    dispatch(initAuth()); 
   }, [dispatch]);
 
   if (authLoading) {
@@ -62,13 +47,12 @@ function AppContent() {
           { path: '/', label: 'Dashboard', icon: '🚀' },
           { path: '/courses', label: 'Courses', icon: '🔭' },
           { path: '/chat', label: 'Lumen Chat', icon: '🤖' },
-         
         ]}
         onNavigate={(path) => {
             navigate(path);       
             setIsMobileOpen(false); 
         }}
-        onLogout={() => auth.signOut()}
+        onLogout={() => dispatch(signOutUser())} 
         isMobileOpen={isMobileOpen} 
         setIsMobileOpen={setIsMobileOpen}
       />
@@ -76,14 +60,10 @@ function AppContent() {
       <main className="flex-1 overflow-x-hidden relative">
          <Routes>
             <Route path="/" element={<DashboardPresenter />} />
-            
             <Route path="/courses" element={<CoursesPresenter />} />
             <Route path="/courses/:subjectId" element={<SubjectPresenter />} />
             <Route path="/mission/:missionId" element={<MissionPresenter />} />
             <Route path="/chat" element={<ChatPresenter />} />
-            
-           
-            
             <Route path="*" element={<Navigate to="/" />} />
          </Routes>
       </main>

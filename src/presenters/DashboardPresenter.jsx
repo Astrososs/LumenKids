@@ -5,26 +5,22 @@ import Swal from 'sweetalert2';
 import { 
   addFriendThunk, 
   removeFriendThunk, 
-  updateUserProfile 
+  updateUserProfile,
+  loadFriendsProfilesThunk
 } from '../store/slices/userSlice';
 import { loadCourses } from '../store/slices/courseSlice';
-import { fetchMultipleUserProfiles } from '../models/userModel';
 import DashboardView from '../views/pages/DashboardView';
 
 export default function DashboardPresenter() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
 
-    const { data: user } = useSelector((state) => state.user);
+    const { data: user, friendsProfiles } = useSelector((state) => state.user);
     const { list: courses, loading: coursesLoading } = useSelector((state) => state.courses);
 
-    const [friendsProfiles, setFriendsProfiles] = useState([]);
     const [friendEmail, setFriendEmail] = useState("");
-    const [isSocialLoading, setIsSocialLoading] = useState(false);
-
     const [isEditing, setIsEditing] = useState(false);
     const [editForm, setEditForm] = useState({ nickname: '', age: '' });
-
     const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
     
     useEffect(() => {
@@ -32,19 +28,12 @@ export default function DashboardPresenter() {
             dispatch(loadCourses(user.uid));
 
             if (user.friends?.length > 0) {
-                setIsSocialLoading(true);
-                fetchMultipleUserProfiles(user.friends).then(profiles => {
-                    setFriendsProfiles(profiles);
-                    setIsSocialLoading(false);
-                });
-            } else {
-                setFriendsProfiles([]);
+                dispatch(loadFriendsProfilesThunk(user.friends));
             }
 
             setEditForm({ nickname: user.nickname || '', age: user.stats?.age || 10 });
         }
     }, [dispatch, user?.uid, user?.friends]);
-
 
     const handleAddFriend = async () => {
         if (!friendEmail.trim()) return;
@@ -94,7 +83,7 @@ export default function DashboardPresenter() {
             setFriendEmail={setFriendEmail}
             onAddFriend={handleAddFriend}
             onRemoveFriend={handleRemoveFriend}
-            isSocialLoading={isSocialLoading}
+            isSocialLoading={false}
 
             isEditing={isEditing}
             setIsEditing={setIsEditing}

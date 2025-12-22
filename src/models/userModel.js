@@ -28,7 +28,7 @@ export const loginUser = async (email, password) => {
   return userProfile; 
 };
 
-export const registerUser = async (email, password, nickname) => {
+export const registerUser = async (email, password, nickname, age) => {
   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
   const uid = userCredential.user.uid;
 
@@ -45,7 +45,8 @@ export const registerUser = async (email, password, nickname) => {
       xp: 0,
       currentLevel: 1,
       streakDays: 0,
-      totalStars: 0
+      totalStars: 0,
+      age: parseInt(age) || 10
     },
     progress: {},
     friends: [] 

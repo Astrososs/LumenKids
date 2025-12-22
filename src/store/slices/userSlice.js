@@ -34,11 +34,11 @@ export const initAuth = createAsyncThunk('user/initAuth', async (_, { dispatch }
 
 export const authenticateUser = createAsyncThunk(
   'user/authenticate',
-  async ({ email, password, nickname, isRegistering }, { rejectWithValue }) => {
+  async ({ email, password, nickname, age, isRegistering }, { rejectWithValue }) => {
     try {
       let user;
       if (isRegistering) {
-        user = await registerUser(email, password, nickname);
+        user = await registerUser(email, password, nickname, age);
       } else {
         user = await loginUser(email, password);
       }

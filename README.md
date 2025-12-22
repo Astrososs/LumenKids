@@ -1,50 +1,114 @@
 # Lumen Kids
 
-**🚀 Deployed Application:** [https://lumenkids.web.app/chat]
+**🚀 Deployed Application:** https://lumenkids.web.app
 
 ---
 
 ## 📖 Short Description
-Lumen Kids is an interactive "study buddy" application designed for children. It helps them focus on different school subjects, such as math, reading, science, and languages. Children can ask questions in their own words and get age-appropriate explanations from an AI friend, "CodeBuddy AI". The application also allows users to practice through small missions and quizzes, tracks their progress, highlights topics they find difficult, and encourages them to keep learning in a fun, motivating way.
+Lumen Kids is an interactive study companion for children, designed to support learning through short missions, progress tracking, and an AI assistant. The application helps students explore different subjects, practice regularly, and stay motivated through clear feedback, daily goals, and guided learning paths.
+
+An integrated AI buddy, **CodeBuddy AI**, allows users to ask questions in their own words and receive age-appropriate explanations, while the mission system helps structure learning and track progress over time.
+
+---
+
+## ⚙️ Project Setup
+
+### Prerequisites
+- Node.js (v18 or later)
+- npm or yarn
+- A Firebase project with Authentication and Firestore enabled
+
+### Installation
+```bash
+git clone <repository-url>
+cd oaomar-ritwan-samiee-HT25-Project
+npm install
+```
+
+### Environment Variables
+Create a `.env` file in the root directory:
+```env
+VITE_FIREBASE_API_KEY=your_key
+VITE_FIREBASE_AUTH_DOMAIN=your_domain
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_AI_API_KEY=your_ai_key
+```
+
+### Run Locally
+```bash
+npm run dev
+```
+
+### Build & Deploy
+```bash
+npm run build
+firebase deploy
+```
 
 ---
 
 ## 🚦 Project Status
 
-### ✅ What we have done
-* **Framework Setup:** Initialized the project using **React** and **Vite**, configured **Tailwind CSS** for styling, and set up **Redux** for state management.
-* **Firebase Integration:** Configured Firebase for hosting and Firestore for the database.
-* **AI Integration:** Installed `genai` and implemented the initial connection to the AI API to generate answers and explanations.
-* **App Layout & Views:** Created the main UI structure based on the Lumen Kids design, including:
-    * **Dashboard:** Displays the "New Explorer" greeting, current level, and daily streaks.
-    * **AI Chat:** Functional chat interface where kids can ask questions like "What is a loop?" and receive simplified answers.
-    * **Stats/Profile:** Visualizes "Skill Analysis" (Loops, Syntax, Logic) and tracks XP.
+### ✅ Implemented Features
+- **Framework Setup:** Built using React and Vite, styled with Tailwind CSS, and structured with Redux Toolkit for application state management.
+- **Firebase Integration:** Firebase Authentication and Firestore used for user login and per-user data persistence.
+- **AI Integration:** Integrated Google Generative AI to provide age-appropriate explanations through the AI buddy.
+- **Dashboard:**
+  - Overview of user progress
+  - Daily goals to help users decide what to focus on before starting a session
+- **Courses & Missions:**
+  - Structured learning paths
+  - Sequential mission locking to guide progression
+  - Clear visual feedback for completed missions using green outlines
+- **AI Buddy:**
+  - Interactive chat interface
+  - Support for multiple chat conversations, allowing users to separate topics and revisit earlier discussions
 
-### 🚧 What we still plan to do
- * **Missions:** Lists active tasks (e.g., "Loop de Loop") and completed missions.
-* **Refine AI Prompts:** Further tune the AI to provide more age-specific analogies and mini-stories based on the child's profile.
-* **User Settings:** Finalize the settings for UI language and dark/light mode preferences.
-* **Advanced Progress Tracking:** Implement the logic to pinpoint specific weaknesses based on mission performance.
-* **Mission Database:** Expand the Firestore database with more predefined missions (title, description, difficulty).
+---
+
+## 🧩 Architecture Overview
+The application follows a Presenter–View–State architecture:
+- Views contain only UI logic.
+- Presenters handle user interaction, navigation, and dispatch actions.
+- Application state is centralized using Redux Toolkit.
+- Persistence is handled through Firebase Firestore and Authentication via model functions and Redux side effects.
+
+This separation ensures clear responsibility boundaries, maintainability, and scalability.
+
+---
+
+## 🧑‍🤝‍🧑 User-Visible Third-Party Components
+The project uses the following user-visible third-party libraries:
+- React Router for navigation between dashboard, courses, missions, and AI chat
+- Firebase Authentication and Firestore for login flow and persistent user data
+- Tailwind CSS for layout, responsiveness, and visual feedback
+- Google Generative AI SDK for AI buddy responses and explanations
+
+All third-party components are integrated consistently with the application architecture and are visible through user interaction and UI behavior.
 
 ---
 
 ## 📂 Project File Structure
 
-```text
+```
 /
-├── .firebase/             # Firebase hosting cache and build settings
-├── public/                # Static assets 
-├── src/                   # Main application source code
-│   ├── components/        # Reusable UI components 
-│   ├── pages/             # Main views: Dashboard, Missions, Chat, Profile
-│   ├── store/             # Redux slices for state management
-│   ├── App.jsx            # Main app component and routing
-│   └── main.jsx           # Entry point
-├── .firebaserc            # Firebase project aliases
-├── eslint.config.js       # Linting configuration
-├── firebase.json          # Firebase deployment configuration
-├── index.html             # HTML entry point
-├── package.json           # Project dependencies
-├── tailwind.config.js     # Tailwind CSS theme configuration
-└── vite.config.js         # Vite build configuration
+├── public/                Static assets
+├── src/
+│   ├── components/        Reusable UI components
+│   ├── views/             Pure view components (UI only)
+│   ├── presenters/        Interaction and navigation logic
+│   ├── store/             Redux slices for application state
+│   ├── models/            Firebase and API interaction logic
+│   ├── App.jsx            Application composition and routing
+│   └── main.jsx           Entry point
+├── .firebaserc            Firebase project aliases
+├── firebase.json          Firebase deployment configuration
+├── package.json           Project dependencies
+├── tailwind.config.js     Tailwind CSS configuration
+└── vite.config.js         Vite build configuration
+```
+
+---
+
+## 📌 Project Status
+The core functionality is fully implemented and deployed. The project has been refined based on user evaluation, focusing on clarity, feedback, motivation, and structured learning rather than adding unnecessary complexity.

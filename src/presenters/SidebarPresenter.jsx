@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { signOutUser } from '../store/slices/userSlice';
-import SidebarView from './views/pages/SidebarView';
+import SidebarView from '../views/pages/SidebarView';
 
 export default function SidebarPresenter() {
   const dispatch = useDispatch();
@@ -37,7 +37,6 @@ export default function SidebarPresenter() {
         { label: "Dashboard", path: "/", icon: "🏠" },
         { label: "Courses", path: "/courses", icon: "📚" },
         { label: "AI Buddy", path: "/chat", icon: "🤖" },
-         
       ]}
       onNavigate={handleNavigate}
       onLogout={handleLogout}

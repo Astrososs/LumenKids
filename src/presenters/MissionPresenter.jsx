@@ -39,11 +39,8 @@ export default function MissionPresenter() {
     };
   }, [missionId, user?.uid, dispatch]);
 
-  // --- LOGIC: Calculate Derived State ---
-  // If we are loading and have no mission data yet, we are in "initial load"
+
   const isInitialLoading = loading && !mission;
-  
-  // Safe access to current task
   const currentTask = mission && mission.tasks ? mission.tasks[taskIndex] : null;
   const totalTasks = mission && mission.tasks ? mission.tasks.length : 0;
 
@@ -62,7 +59,10 @@ export default function MissionPresenter() {
     setIsFinished(true);
 
     if (user?.uid) {
+      const isReplay = user.progress && user.progress[mission.id];
       const { stars, xpEarned } = calculateRewards(mission, finalScore);
+      const finalXp = isReplay ? 0 : xpEarned;
+
       dispatch(
         saveGameProgress({
           uid: user.uid,
@@ -73,7 +73,7 @@ export default function MissionPresenter() {
             score: finalScore,
             completedAt: new Date().toISOString(),
           },
-          xpGained: xpEarned,
+          xpGained: finalXp,
         })
       );
     }
@@ -111,7 +111,7 @@ export default function MissionPresenter() {
 
   return (
     <MissionView
-      // Data Props
+    
       mission={mission}
       nextMissionId={null}
       currentTask={currentTask}
@@ -120,15 +120,15 @@ export default function MissionPresenter() {
       score={score}
       aiHelp={aiHelp}
       
-      // State Props
-      isLoading={isInitialLoading} // Passing the boolean, not the component
-      error={error}                // Passing the error string, not the div
+
+      isLoading={isInitialLoading} 
+      error={error}               
       isAiLoading={aiHelpStatus === 'loading'}
       isFinished={isFinished}
       selectedOption={selectedOption}
       isCorrect={isCorrect}
 
-      // Event Handlers
+
       onSelectOption={setSelectedOption}
       onCheck={handleCheck}
       onNext={handleNext}

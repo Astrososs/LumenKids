@@ -1,4 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../../firebase/firebaseConfig';
 import { 
   loginUser, 
   registerUser, 
@@ -6,8 +8,29 @@ import {
   updateUserInDb, 
   findUserByEmail, 
   addFriendToDb, 
-  removeFriendFromDb 
+  removeFriendFromDb,
+  fetchMultipleUserProfiles,
+  getUserProfile
 } from '../../models/userModel';
+
+
+export const initAuth = createAsyncThunk('user/initAuth', async (_, { dispatch }) => {
+  dispatch(setLoading(true));
+  return new Promise((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        const profile = await getUserProfile(currentUser.uid);
+        if (profile) dispatch(loginSuccess(profile));
+      } else {
+        dispatch(logout());
+      }
+      dispatch(setLoading(false));
+      resolve();
+    });
+    return unsubscribe;
+  });
+});
+
 
 export const authenticateUser = createAsyncThunk(
   'user/authenticate',
@@ -20,6 +43,19 @@ export const authenticateUser = createAsyncThunk(
         user = await loginUser(email, password);
       }
       return user;
+    } catch (err) {
+      return rejectWithValue(err.message);
+    }
+  }
+);
+
+
+export const loadFriendsProfilesThunk = createAsyncThunk(
+  'user/loadFriendsProfiles',
+  async (friendUids, { rejectWithValue }) => {
+    try {
+      if (!friendUids || friendUids.length === 0) return [];
+      return await fetchMultipleUserProfiles(friendUids);
     } catch (err) {
       return rejectWithValue(err.message);
     }
@@ -43,7 +79,6 @@ export const saveGameProgress = createAsyncThunk(
   async ({ uid, missionId, result, xpGained }, { getState }) => {
     const state = getState();
     const currentUser = state.user.data;
-
     const currentXP = (currentUser.stats?.xp || 0) + xpGained;
     const currentStars = (currentUser.stats?.totalStars || 0) + result.stars;
     const newLevel = Math.floor(currentXP / 100) + 1;
@@ -56,7 +91,6 @@ export const saveGameProgress = createAsyncThunk(
     };
 
     await updateUserInDb(uid, updates);
-
     return { missionId, result, xp: currentXP, stars: currentStars, level: newLevel };
   }
 );
@@ -73,7 +107,6 @@ export const updateUserProfile = createAsyncThunk(
   }
 );
 
-
 export const addFriendThunk = createAsyncThunk(
   'user/addFriend',
   async ({ uid, friendEmail }, { rejectWithValue }) => {
@@ -81,7 +114,6 @@ export const addFriendThunk = createAsyncThunk(
       const friend = await findUserByEmail(friendEmail);
       if (!friend) throw new Error("User not found!");
       if (friend.uid === uid) throw new Error("You cannot add yourself!");
-
       await addFriendToDb(uid, friend.uid);
       return friend; 
     } catch (err) {
@@ -106,6 +138,7 @@ const userSlice = createSlice({
   name: 'user',
   initialState: {
     data: null,
+    friendsProfiles: [], 
     loading: true, 
     error: null
   },
@@ -118,6 +151,7 @@ const userSlice = createSlice({
     },
     logout: (state) => {
       state.data = null;
+      state.friendsProfiles = [];
       state.loading = false;
       state.error = null;
     }
@@ -127,9 +161,10 @@ const userSlice = createSlice({
       .addCase(authenticateUser.pending, (state) => { state.loading = true; state.error = null; })
       .addCase(authenticateUser.fulfilled, (state, action) => { state.loading = false; state.data = action.payload; })
       .addCase(authenticateUser.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
-      
       .addCase(signOutUser.fulfilled, (state) => { state.data = null; state.loading = false; })
-
+      .addCase(loadFriendsProfilesThunk.fulfilled, (state, action) => {
+        state.friendsProfiles = action.payload;
+      })
       .addCase(saveGameProgress.fulfilled, (state, action) => {
         if (state.data) {
            state.data.progress = { ...state.data.progress, [action.payload.missionId]: action.payload.result };
@@ -138,25 +173,16 @@ const userSlice = createSlice({
            state.data.stats.currentLevel = action.payload.level;
         }
       })
-
-
       .addCase(updateUserProfile.fulfilled, (state, action) => {
         if (state.data) {
-
           state.data = { ...state.data, ...action.payload };
-
-          if (action.payload['stats.age']) {
-             state.data.stats.age = action.payload['stats.age'];
-          }
+          if (action.payload['stats.age']) state.data.stats.age = action.payload['stats.age'];
         }
       })
-
       .addCase(addFriendThunk.fulfilled, (state, action) => {
         if (state.data) {
           if (!state.data.friends) state.data.friends = [];
-          if (!state.data.friends.includes(action.payload.uid)) {
-            state.data.friends.push(action.payload.uid);
-          }
+          if (!state.data.friends.includes(action.payload.uid)) state.data.friends.push(action.payload.uid);
         }
       })
       .addCase(removeFriendThunk.fulfilled, (state, action) => {

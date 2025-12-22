@@ -1,28 +1,27 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { addFriendThunk, removeFriendThunk } from '../store/slices/userSlice';
-import { fetchMultipleUserProfiles } from '../models/userModel';
+import { 
+  addFriendThunk, 
+  removeFriendThunk, 
+  loadFriendsProfilesThunk 
+} from '../store/slices/userSlice';
+
 import Swal from 'sweetalert2';
+import SocialView from '../views/pages/SocialView'; 
 
 export default function SocialPresenter() {
   const dispatch = useDispatch();
-  const { data: user } = useSelector((state) => state.user);
+  
+  
+  const { data: user, friendsProfiles } = useSelector((state) => state.user);
+  
   const [friendEmail, setFriendEmail] = useState("");
-  const [friendsProfiles, setFriendsProfiles] = useState([]);
-  const [loading, setLoading] = useState(false);
 
- 
   useEffect(() => {
     if (user?.friends?.length > 0) {
-      setLoading(true);
-      fetchMultipleUserProfiles(user.friends).then(profiles => {
-        setFriendsProfiles(profiles);
-        setLoading(false);
-      });
-    } else {
-      setFriendsProfiles([]); 
+      dispatch(loadFriendsProfilesThunk(user.friends));
     }
-  }, [user?.friends]);
+  }, [dispatch, user?.friends]);
 
   const handleAddFriend = async () => {
     if (!friendEmail.trim()) return;
@@ -63,7 +62,6 @@ export default function SocialPresenter() {
     });
 
     if (result.isConfirmed) {
-    
       await dispatch(removeFriendThunk({ uid: user.uid, friendUid }));
       
       Swal.fire({
@@ -81,11 +79,11 @@ export default function SocialPresenter() {
   return (
     <SocialView 
       user={user}
-      friends={friendsProfiles}
+      friends={friendsProfiles} 
       emailInput={friendEmail}
       setEmailInput={setFriendEmail}
       onAddFriend={handleAddFriend}
-      isLoading={loading}
+      isLoading={false} 
       onRemoveFriend={handleRemoveFriend}
     />
   );

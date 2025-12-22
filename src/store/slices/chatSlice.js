@@ -7,10 +7,10 @@ import {
 } from '../../models/chatModel';
 import { sendMessageToAi } from '../../models/aiModel';
 
+const pendingCreations = {};
 
 let unsubscribeFromChats = null;
 let subscribedUid = null;
-
 
 export const unsubscribeFromChatsThunk = createAsyncThunk('chat/unsubscribe', async () => {
   if (unsubscribeFromChats) {
@@ -55,9 +55,8 @@ export const handleUserMessage = createAsyncThunk(
   async ({ uid, chatId, tempChatId, message, userAge, history }, thunkAPI) => {
     const { dispatch, rejectWithValue } = thunkAPI;
 
-    const tempId = tempChatId || null;
-    const localChatId = chatId || tempId;
-
+    const localChatId = chatId || tempChatId;
+    
     dispatch(
       upsertChatShell({
         id: localChatId,
@@ -65,6 +64,7 @@ export const handleUserMessage = createAsyncThunk(
         messages: [],
       })
     );
+    
     dispatch(
       appendMessage({
         chatId: localChatId,
@@ -72,13 +72,31 @@ export const handleUserMessage = createAsyncThunk(
       })
     );
 
+    let activeId = chatId;
+
     try {
-      let activeId = chatId;
+      const isTempId = activeId && activeId.toString().startsWith('temp_');
 
-      if (!activeId) {
-        activeId = await createNewChat(uid, message);
+      if (isTempId && pendingCreations[activeId]) {
+         activeId = await pendingCreations[activeId];
+      } 
+      else if (!activeId || (isTempId && !pendingCreations[activeId])) {
+        const tempKey = tempChatId || activeId;
+        
+        const creationPromise = createNewChat(uid, message).then((realId) => {
+            if (tempKey) {
+                dispatch(mapChatId({ fromId: tempKey, toId: realId }));
+            }
+            return realId;
+        });
 
-        if (tempId) dispatch(mapChatId({ fromId: tempId, toId: activeId }));
+        if (tempKey) {
+            pendingCreations[tempKey] = creationPromise;
+        }
+
+        activeId = await creationPromise;
+        
+        if (tempKey) delete pendingCreations[tempKey];
       } else {
         await sendMessageToChat(uid, activeId, { role: 'user', content: message });
       }
@@ -95,10 +113,10 @@ export const handleUserMessage = createAsyncThunk(
 
       await sendMessageToChat(uid, activeId, { role: 'assistant', content: aiResponseObj.text });
 
-      return { chatId: activeId, tempChatId: tempId };
-    } catch (err) {
-      const safeChatId = chatId || tempId;
+      return { chatId: activeId, tempChatId: tempChatId };
 
+    } catch (err) {
+      const safeChatId = activeId || chatId || tempChatId;
       dispatch(
         appendMessage({
           chatId: safeChatId,
@@ -108,21 +126,17 @@ export const handleUserMessage = createAsyncThunk(
           },
         })
       );
-
-      return rejectWithValue(err?.message || 'Failed to send message');
+      return rejectWithValue({ message: err?.message || 'Failed to send message', chatId: safeChatId });
     }
   }
 );
-
 
 const chatSlice = createSlice({
   name: 'chat',
   initialState: {
     history: [],
-
     idMap: {},
-
-    sendStatus: 'idle',
+    loadingChats: {}, 
     deleteStatus: 'idle',
     subscribeStatus: 'idle',
     error: null,
@@ -135,7 +149,18 @@ const chatSlice = createSlice({
     mapChatId: (state, action) => {
       const { fromId, toId } = action.payload || {};
       if (!fromId || !toId || fromId === toId) return;
+      
       state.idMap[fromId] = toId;
+      
+      if (state.loadingChats[fromId]) {
+        state.loadingChats[toId] = true;
+        delete state.loadingChats[fromId];
+      }
+
+      const localChat = state.history.find(c => c.id === fromId);
+      if (localChat) {
+          localChat.id = toId;
+      }
     },
 
     upsertChatShell: (state, action) => {
@@ -149,12 +174,6 @@ const chatSlice = createSlice({
           messages: Array.isArray(chat.messages) ? chat.messages : [],
           ...chat,
         });
-      } else {
-        state.history[idx] = {
-          ...state.history[idx],
-          ...chat,
-          messages: state.history[idx].messages || chat.messages || [],
-        };
       }
     },
 
@@ -162,10 +181,9 @@ const chatSlice = createSlice({
       const { chatId, message } = action.payload || {};
       if (!chatId || !message) return;
 
-      const idx = state.history.findIndex((c) => c.id === chatId);
-      if (idx === -1) {
-        state.history.unshift({ id: chatId, messages: [message] });
-      } else {
+      const resolvedId = state.idMap[chatId] || chatId;
+      const idx = state.history.findIndex((c) => c.id === resolvedId);
+      if (idx !== -1) {
         const existing = state.history[idx];
         const msgs = Array.isArray(existing.messages) ? existing.messages : [];
         existing.messages = [...msgs, message];
@@ -189,16 +207,24 @@ const chatSlice = createSlice({
         state.subscribeStatus = 'idle';
       })
 
-      .addCase(handleUserMessage.pending, (state) => {
-        state.sendStatus = 'loading';
+      .addCase(handleUserMessage.pending, (state, action) => {
+        const { chatId, tempChatId } = action.meta.arg;
+        const targetId = chatId || tempChatId;
+        if (targetId) {
+            state.loadingChats[targetId] = true;
+        }
         state.error = null;
       })
-      .addCase(handleUserMessage.fulfilled, (state) => {
-        state.sendStatus = 'succeeded';
+      .addCase(handleUserMessage.fulfilled, (state, action) => {
+        const { chatId, tempChatId } = action.payload;
+        if (chatId) delete state.loadingChats[chatId];
+        if (tempChatId) delete state.loadingChats[tempChatId];
       })
       .addCase(handleUserMessage.rejected, (state, action) => {
-        state.sendStatus = 'failed';
-        state.error = action.payload || action.error?.message || 'Failed to send message';
+        const idToClear = action.payload?.chatId || action.meta.arg.chatId || action.meta.arg.tempChatId;
+        if (idToClear) delete state.loadingChats[idToClear];
+        
+        state.error = action.payload?.message || action.error?.message || 'Failed to send message';
       })
 
       .addCase(deleteChatThunk.pending, (state) => {
@@ -209,7 +235,6 @@ const chatSlice = createSlice({
         state.deleteStatus = 'succeeded';
         const deletedId = action.payload;
         state.history = state.history.filter((c) => c.id !== deletedId);
-
         for (const [tempId, realId] of Object.entries(state.idMap)) {
           if (realId === deletedId || tempId === deletedId) delete state.idMap[tempId];
         }

@@ -18,7 +18,7 @@ export default function ChatPresenter() {
   const dispatch = useDispatch();
 
   const { data: user } = useSelector((state) => state.user);
-  const { history: chats, idMap, sendStatus, deleteStatus, subscribeStatus, error } =
+  const { history: chats, idMap, loadingChats, deleteStatus, subscribeStatus, error } =
     useSelector((state) => state.chat);
 
   const [currentChatId, setCurrentChatId] = useState(null);
@@ -49,13 +49,18 @@ export default function ChatPresenter() {
   }, [chats, currentChatId]);
 
   const resolvedChatId = (currentChatId && idMap[currentChatId]) || currentChatId;
+  
+  const isCurrentChatLoading = !!(resolvedChatId && loadingChats[resolvedChatId]);
+
   const activeChat = chats.find((c) => c.id === resolvedChatId);
   const messages = activeChat ? activeChat.messages : [];
 
   const handleBack = () => navigate('/');
 
   const handleSend = async () => {
-    if (!input.trim() || !user?.uid) return;
+
+    if (!input.trim() || !user?.uid || isCurrentChatLoading) return;
+    
     const userMsg = input;
     setInput('');
 
@@ -106,8 +111,7 @@ export default function ChatPresenter() {
 
     if (result.isConfirmed) {
       await dispatch(deleteChatThunk({ uid: user.uid, chatId }));
-      const resolved = (currentChatId && idMap[currentChatId]) || currentChatId;
-      if (resolved === chatId) setCurrentChatId(null);
+      if (resolvedChatId === chatId) setCurrentChatId(null);
       
       Swal.fire({
           title: 'Deleted!',
@@ -121,7 +125,6 @@ export default function ChatPresenter() {
     }
   };
 
-  const isSending = sendStatus === 'loading';
   const isDeleting = deleteStatus === 'loading';
   const isSubscribing = subscribeStatus === 'loading';
 
@@ -132,7 +135,9 @@ export default function ChatPresenter() {
       messages={messages}
       input={input}
       setInput={setInput}
-      loading={isSending}
+      
+      loading={isCurrentChatLoading}
+      
       isDeleting={isDeleting}
       isSubscribing={isSubscribing}
       error={error}

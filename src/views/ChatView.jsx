@@ -145,13 +145,14 @@ const ChatView = ({
         )}
 
         <div className="p-3 md:p-4 bg-gray-800/90 backdrop-blur-md border-t border-gray-700 z-20">
-          <form onSubmit={(e) => { e.preventDefault(); onSend(); }} className="relative max-w-4xl mx-auto flex gap-2">
+          <form onSubmit={(e) => { e.preventDefault(); if (!loading) onSend(); }} className="relative max-w-4xl mx-auto flex gap-2">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask a question..."
-              className="flex-1 bg-gray-700 text-white placeholder-gray-400 rounded-xl px-4 py-3 md:py-4 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-600 shadow-inner text-sm md:text-base"
+              disabled={false}
+              className="flex-1 bg-gray-700 text-white placeholder-gray-400 rounded-xl px-4 py-3 md:py-4 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-600 shadow-inner text-sm md:text-base disabled:opacity-50"
             />
             <button 
               type="submit"

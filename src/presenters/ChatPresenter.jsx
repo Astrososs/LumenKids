@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import Swal from 'sweetalert2'; 
+import Swal from 'sweetalert2';
 import {
   handleUserMessage,
   subscribeToChatsThunk,
   unsubscribeFromChatsThunk,
-  deleteChatThunk,
+  chatDeleted,
   setChatHistory,
 } from '../store/slices/chatSlice';
 import ChatView from '../views/ChatView';
@@ -16,23 +16,21 @@ const makeTempId = () => `temp_${Date.now()}_${Math.random().toString(16).slice(
 export default function ChatPresenter() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-
+  
   const { data: user } = useSelector((state) => state.user);
   const { history: chats, idMap, loadingChats, deleteStatus, subscribeStatus, error } =
     useSelector((state) => state.chat);
-
+  
   const [currentChatId, setCurrentChatId] = useState(null);
   const [input, setInput] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
   const hasAutoSelectedRef = useRef(false);
 
   useEffect(() => {
     if (!user?.uid) return;
-
+    
     setCurrentChatId(null);
     hasAutoSelectedRef.current = false;
-
     dispatch(subscribeToChatsThunk(user.uid));
 
     return () => {
@@ -56,7 +54,6 @@ export default function ChatPresenter() {
 
   const resolvedChatId = (currentChatId && idMap[currentChatId]) || currentChatId;
   const isCurrentChatLoading = !!(resolvedChatId && loadingChats[resolvedChatId]);
-
   const activeChat = chats.find((c) => c.id === resolvedChatId);
   const messages = activeChat ? activeChat.messages : [];
 
@@ -66,14 +63,15 @@ export default function ChatPresenter() {
     if (!input.trim() || !user?.uid || isCurrentChatLoading) return;
     
     const userMsg = input;
-    setInput(''); 
-
+    setInput('');
+    
     const tempChatId = currentChatId ? null : makeTempId();
+    
     if (tempChatId) {
       setCurrentChatId(tempChatId);
       hasAutoSelectedRef.current = true;
     }
-
+    
     await dispatch(
       handleUserMessage({
         uid: user.uid,
@@ -106,7 +104,7 @@ export default function ChatPresenter() {
       text: "You won't be able to undo this!",
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#ef4444', 
+      confirmButtonColor: '#ef4444',
       cancelButtonColor: '#374151',
       confirmButtonText: 'Yes, delete it!',
       background: '#1f2937',
@@ -114,17 +112,18 @@ export default function ChatPresenter() {
     });
 
     if (result.isConfirmed) {
-      await dispatch(deleteChatThunk({ uid: user.uid, chatId }));
+      dispatch(chatDeleted({ uid: user.uid, chatId }));
+      
       if (resolvedChatId === chatId) setCurrentChatId(null);
       
       Swal.fire({
-          title: 'Deleted!',
-          text: 'The chat has been removed.',
-          icon: 'success',
-          timer: 1500,
-          showConfirmButton: false,
-          background: '#1f2937',
-          color: '#fff'
+        title: 'Deleted!',
+        text: 'The chat has been removed.',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false,
+        background: '#1f2937',
+        color: '#fff'
       });
     }
   };
@@ -135,22 +134,20 @@ export default function ChatPresenter() {
   return (
     <ChatView
       chats={chats}
-      currentChatId={resolvedChatId}
+      currentChat={activeChat}
       messages={messages}
       input={input}
-      setInput={setInput}
-      loading={isCurrentChatLoading} 
+      onInputChange={setInput}
+      onSend={handleSend}
+      onNewChat={handleNewChat}
+      onSelectChat={handleSelectChat}
+      onDelete={handleDelete}
+      onBack={handleBack}
+      isLoading={isCurrentChatLoading}
       isDeleting={isDeleting}
       isSubscribing={isSubscribing}
-      error={error}
-      onSend={handleSend}
-      onSelectChat={handleSelectChat}
-      onNewChat={handleNewChat}
-      onDeleteChat={handleDelete}
-      hasActiveChat={!!resolvedChatId}
       isMobileMenuOpen={isMobileMenuOpen}
       setIsMobileMenuOpen={setIsMobileMenuOpen}
-      onBack={handleBack}
     />
   );
 }

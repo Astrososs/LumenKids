@@ -7,20 +7,21 @@ import {
   askLumenHelp,
   clearAiHelp,
 } from '../store/slices/courseSlice';
-import { saveGameProgress } from '../store/slices/userSlice';
+import { progressSaved } from '../store/slices/userSlice';
 import MissionView from '../views/pages/MissionView';
 import { isAnswerCorrect, calculateRewards, generateAiPrompt } from '../utils/missionLogic';
+import { getLocalDateKey, generateDailyQuest } from '../utils/dailyQuest';
 
 export default function MissionPresenter() {
   const { missionId } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-
+  
   const { activeMission: mission, loading, error, aiHelp, aiHelpStatus } = useSelector(
     (state) => state.courses
   );
   const { data: user } = useSelector((state) => state.user);
-
+  
   const [taskIndex, setTaskIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
   const [isCorrect, setIsCorrect] = useState(null);
@@ -39,13 +40,13 @@ export default function MissionPresenter() {
     };
   }, [missionId, user?.uid, dispatch]);
 
-
   const isInitialLoading = loading && !mission;
   const currentTask = mission && mission.tasks ? mission.tasks[taskIndex] : null;
   const totalTasks = mission && mission.tasks ? mission.tasks.length : 0;
 
   const handleCheck = () => {
     if (!selectedOption || !currentTask) return;
+    
     const correct = isAnswerCorrect(selectedOption, currentTask.correct);
     setIsCorrect(correct);
     if (correct) setScore((s) => s + 1);
@@ -53,18 +54,41 @@ export default function MissionPresenter() {
 
   const finishMission = () => {
     if (!mission) return;
+    
     const finalScore = mission.type === 'theory' ? totalTasks : score;
     if (mission.type === 'theory') setScore(finalScore);
-
+    
     setIsFinished(true);
 
     if (user?.uid) {
-      const isReplay = user.progress && user.progress[mission.id];
+      const wasCompletedBefore = !!user.progress?.[mission.id];
       const { stars, xpEarned } = calculateRewards(mission, finalScore);
-      const finalXp = isReplay ? 0 : xpEarned;
-
+      const finalXp = wasCompletedBefore ? 0 : xpEarned;
+      
+      const currentXP = (user?.stats?.xp || 0) + finalXp;
+      const currentStars = (user?.stats?.totalStars || 0) + (wasCompletedBefore ? 0 : stars);
+      const newLevel = Math.floor(currentXP / 100) + 1;
+      
+      const todayKey = getLocalDateKey();
+      let dailyQuest = user?.dailyQuest;
+      
+      if (!dailyQuest || dailyQuest.dateKey !== todayKey) {
+        dailyQuest = generateDailyQuest(todayKey);
+      }
+      
+      let updatedDailyQuest = dailyQuest;
+      
+      if (!wasCompletedBefore && dailyQuest?.type === 'COMPLETE_MISSIONS' && !dailyQuest.completed) {
+        const nextProgress = Math.min(dailyQuest.target, (dailyQuest.progress || 0) + 1);
+        updatedDailyQuest = {
+          ...dailyQuest,
+          progress: nextProgress,
+          completed: nextProgress >= dailyQuest.target,
+        };
+      }
+      
       dispatch(
-        saveGameProgress({
+        progressSaved({
           uid: user.uid,
           missionId: mission.id,
           result: {
@@ -73,7 +97,22 @@ export default function MissionPresenter() {
             score: finalScore,
             completedAt: new Date().toISOString(),
           },
-          xpGained: finalXp,
+          xp: currentXP,
+          stars: currentStars,
+          level: newLevel,
+          dailyQuest: updatedDailyQuest,
+          updates: {
+            [`progress.${mission.id}`]: {
+              status: 'completed',
+              stars,
+              score: finalScore,
+              completedAt: new Date().toISOString(),
+            },
+            'stats.xp': currentXP,
+            'stats.totalStars': currentStars,
+            'stats.currentLevel': newLevel,
+            dailyQuest: updatedDailyQuest,
+          },
         })
       );
     }
@@ -81,6 +120,7 @@ export default function MissionPresenter() {
 
   const handleNext = () => {
     if (!mission) return;
+    
     if (taskIndex + 1 < totalTasks) {
       setTaskIndex((i) => i + 1);
       setSelectedOption(null);
@@ -93,6 +133,7 @@ export default function MissionPresenter() {
 
   const handleAskLumen = () => {
     if (!currentTask) return;
+    
     dispatch(
       askLumenHelp({
         prompt: generateAiPrompt(currentTask),
@@ -103,38 +144,31 @@ export default function MissionPresenter() {
 
   const handleExit = () => {
     if (mission?.courseId) {
-        navigate(`/courses/${mission.courseId}`);
+      navigate(`/courses/${mission.courseId}`);
     } else {
-        navigate('/courses');
+      navigate('/courses');
     }
   };
 
   return (
     <MissionView
-    
       mission={mission}
-      nextMissionId={null}
       currentTask={currentTask}
+      taskIndex={taskIndex}
       totalTasks={totalTasks}
-      currentIndex={taskIndex}
-      score={score}
-      aiHelp={aiHelp}
-      
-
-      isLoading={isInitialLoading} 
-      error={error}               
-      isAiLoading={aiHelpStatus === 'loading'}
-      isFinished={isFinished}
       selectedOption={selectedOption}
-      isCorrect={isCorrect}
-
-
       onSelectOption={setSelectedOption}
+      isCorrect={isCorrect}
       onCheck={handleCheck}
       onNext={handleNext}
-      onTheoryDone={handleNext}
-      onAskLumen={handleAskLumen}
+      score={score}
+      isFinished={isFinished}
       onExit={handleExit}
+      isLoading={isInitialLoading}
+      error={error}
+      aiHelp={aiHelp}
+      aiHelpStatus={aiHelpStatus}
+      onAskLumen={handleAskLumen}
     />
   );
 }

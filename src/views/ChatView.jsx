@@ -75,22 +75,20 @@ const MarkdownMessage = ({ content }) => {
 
 const ChatView = ({
   chats,
-  currentChatId,
+  currentChat,
   messages,
 
   input,
-  setInput,
+  onInputChange,
 
-  loading,
+  isLoading,
   error,
   isSubscribing,
 
   onSend,
   onSelectChat,
   onNewChat,
-  onDeleteChat,
-
-  hasActiveChat,
+  onDelete,
 
   isMobileMenuOpen,
   setIsMobileMenuOpen,
@@ -101,7 +99,10 @@ const ChatView = ({
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
+  }, [messages, isLoading]);
+
+  const hasActiveChat = currentChat && messages && messages.length > 0;
+  const currentChatId = currentChat?.id;
 
   return (
     <div className="fixed inset-0 md:static md:h-screen md:flex md:flex-row bg-gray-900 text-white overflow-hidden">
@@ -158,13 +159,13 @@ const ChatView = ({
             </div>
           )}
 
-          {chats.length === 0 && !isSubscribing && (
+          {chats && chats.length === 0 && !isSubscribing && (
             <div className="text-gray-500 text-center text-sm mt-10 px-4">
               No history yet. Start a new chat!
             </div>
           )}
 
-          {chats.map((chat) => (
+          {chats && chats.map((chat) => (
             <div
               key={chat.id}
               onClick={() => {
@@ -183,7 +184,7 @@ const ChatView = ({
               </div>
 
               <button
-                onClick={(e) => onDeleteChat(e, chat.id)}
+                onClick={(e) => onDelete(e, chat.id)}
                 className="cursor-pointer md:opacity-0 md:group-hover:opacity-100 text-gray-500 hover:text-red-400 transition px-2"
                 title="Delete chat"
               >
@@ -233,7 +234,7 @@ const ChatView = ({
               </div>
             ))}
 
-            {loading && (
+            {isLoading && (
               <div className="flex justify-start">
                 <div className="bg-gray-800/80 border border-white/10 p-4 rounded-2xl rounded-bl-none animate-pulse text-gray-300 text-sm flex gap-2 items-center">
                   <span>Thinking</span>
@@ -252,20 +253,23 @@ const ChatView = ({
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (!loading) onSend();
+              if (!isLoading && input && input.trim()) {
+                onSend();
+              }
             }}
             className="relative max-w-4xl mx-auto flex gap-2"
           >
             <input
               type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
+              value={input || ''}
+              onChange={(e) => onInputChange(e.target.value)}
               placeholder="Ask a question..."
+              disabled={isLoading}
               className="flex-1 bg-gray-700 text-white placeholder-gray-400 rounded-xl px-4 py-3 md:py-4 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-600 shadow-inner text-sm md:text-base disabled:opacity-50"
             />
             <button
               type="submit"
-              disabled={loading || !input.trim()}
+              disabled={isLoading || !input || !input.trim()}
               className="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 md:px-6 rounded-xl transition disabled:opacity-50 font-bold shadow-lg flex items-center justify-center active:scale-95"
             >
               🚀

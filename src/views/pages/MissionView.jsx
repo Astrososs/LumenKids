@@ -8,7 +8,6 @@ function normalizeMarkdown(text) {
   if (!text) return '';
   let t = String(text).replace(/\r\n/g, '\n');
 
-
   t = t
     .replace(/([^\n])\s(\*\s+)/g, '$1\n$2')
     .replace(/([^\n])\s(-\s+)/g, '$1\n$2')
@@ -79,11 +78,11 @@ const MarkdownHint = ({ content }) => {
 
 const MissionView = ({
   mission, nextMissionId,
-  currentTask, totalTasks, currentIndex,
+  currentTask, totalTasks, taskIndex,
   selectedOption, onSelectOption,
-  isCorrect, onCheck, onNext, onTheoryDone,
+  isCorrect, onCheck, onNext,
 
-  onAskLumen, aiHelp, isAiLoading,
+  onAskLumen, aiHelp, aiHelpStatus,
 
   isFinished, score, onExit,
 
@@ -160,7 +159,9 @@ const MissionView = ({
     );
   }
 
+  const currentIndex = taskIndex;
   const progressPercent = ((currentIndex + 1) / totalTasks) * 100;
+  const isAiLoading = aiHelpStatus === 'loading';
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col">

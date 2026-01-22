@@ -22,6 +22,8 @@ import {
   courseUpdated,
   courseIdReplaced,
   courseDeleted,
+  courseUpdateReverted,
+  courseDeleteReverted,
   loadCourses,
 } from '../slices/courseSlice';
 
@@ -135,7 +137,7 @@ persistenceMiddleware.startListening({
     } catch (error) {
       const prevCourse = prevState.list.find(c => c.id === courseId);
       if (prevCourse) {
-        listenerApi.dispatch(courseUpdated({ uid, courseId, courseData: prevCourse }));
+        listenerApi.dispatch(courseUpdateReverted({ uid, courseId, courseData: prevCourse }));
       }
     }
   },
@@ -147,6 +149,10 @@ persistenceMiddleware.startListening({
     const { uid, courseId } = action.payload;
     const prevState = listenerApi.getOriginalState().courses;
     
+    if (!uid) {
+      return;
+    }
+    
     if (courseId.startsWith('temp_')) {
       return;
     }
@@ -156,7 +162,7 @@ persistenceMiddleware.startListening({
     } catch (error) {
       const deletedCourse = prevState.list.find(c => c.id === courseId);
       if (deletedCourse) {
-        listenerApi.dispatch(courseAdded({ uid, courseData: deletedCourse }));
+        listenerApi.dispatch(courseDeleteReverted({ uid, courseData: deletedCourse }));
       }
     }
   },

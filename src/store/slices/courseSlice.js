@@ -212,6 +212,28 @@ const courseSlice = createSlice({
       if (state.activeCourse?.id === courseId) state.activeCourse = null;
       state.loading = false;
     },
+    courseUpdateReverted: (state, action) => {
+      const { courseId, courseData } = action.payload;
+      const idx = state.list.findIndex((c) => c.id === courseId);
+      
+      if (idx !== -1) {
+        state.list[idx] = { ...state.list[idx], ...courseData };
+      }
+      
+      if (state.activeCourse?.id === courseId) {
+        state.activeCourse = { ...state.activeCourse, ...courseData };
+      }
+      
+      state.loading = false;
+    },
+    courseDeleteReverted: (state, action) => {
+      const { courseData } = action.payload;
+      const exists = state.list.find(c => c.id === courseData.id);
+      if (!exists) {
+        state.list.push(courseData);
+      }
+      state.loading = false;
+    },
     setActiveCourse: (state, action) => {
       state.activeCourse = state.list.find((c) => c.id === action.payload) || null;
     },
@@ -328,6 +350,8 @@ export const {
   courseUpdated,
   courseIdReplaced,
   courseDeleted,
+  courseUpdateReverted,
+  courseDeleteReverted,
   setActiveCourse,
   clearActiveMission,
   clearAiHelp,

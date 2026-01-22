@@ -1,52 +1,14 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import {
-  createNewChat,
-  sendMessageToChat,
-  deleteChat,
-  subscribeToChats,
-} from '../../models/chatModel';
 import { sendMessageToAi } from '../../models/aiModel';
 
-const pendingCreations = {};
-
-let unsubscribeFromChats = null;
-let subscribedUid = null;
-
-export const unsubscribeFromChatsThunk = createAsyncThunk('chat/unsubscribe', async () => {
-  if (unsubscribeFromChats) {
-    unsubscribeFromChats();
-    unsubscribeFromChats = null;
-    subscribedUid = null;
-  }
+export const unsubscribeFromChatsThunk = createAsyncThunk('chat/unsubscribe', async (_, { dispatch }) => {
+  dispatch(chatUnsubscribeRequested());
 });
 
 export const subscribeToChatsThunk = createAsyncThunk(
   'chat/subscribe',
   async (uid, { dispatch }) => {
-    if (subscribedUid === uid && unsubscribeFromChats) return;
-
-    if (unsubscribeFromChats) {
-      unsubscribeFromChats();
-      unsubscribeFromChats = null;
-      subscribedUid = null;
-    }
-
-    subscribedUid = uid;
-    unsubscribeFromChats = subscribeToChats(uid, (chats) => {
-      dispatch(setChatHistory(chats));
-    });
-  }
-);
-
-export const deleteChatThunk = createAsyncThunk(
-  'chat/delete',
-  async ({ uid, chatId }, { rejectWithValue }) => {
-    try {
-      await deleteChat(uid, chatId);
-      return chatId;
-    } catch (err) {
-      return rejectWithValue(err?.message || 'Failed to delete chat');
-    }
+    dispatch(chatSubscribeRequested(uid));
   }
 );
 
@@ -54,7 +16,6 @@ export const handleUserMessage = createAsyncThunk(
   'chat/handleMessage',
   async ({ uid, chatId, tempChatId, message, userAge, history }, thunkAPI) => {
     const { dispatch, rejectWithValue, getState } = thunkAPI;
-
     const localChatId = chatId || tempChatId;
     
     dispatch(
@@ -71,51 +32,40 @@ export const handleUserMessage = createAsyncThunk(
         message: { role: 'user', content: message },
       })
     );
-
-    const currentState = getState().chat;
-    let activeId = (chatId && currentState.idMap[chatId]) ? currentState.idMap[chatId] : chatId;
-
+    
+    if (!chatId) {
+      dispatch(chatCreationRequested({ uid, tempChatId: localChatId, message }));
+    } else {
+      dispatch(userMessagePersistRequested({ uid, chatId, message }));
+    }
+    
     try {
-      const isTempId = activeId && activeId.toString().startsWith('temp_');
-
-      if (isTempId && pendingCreations[activeId]) {
-         activeId = await pendingCreations[activeId];
-      } 
-      else if (!activeId || (isTempId && !pendingCreations[activeId])) {
-        const tempKey = tempChatId || activeId;
-        
-        const creationPromise = createNewChat(uid, message).then((realId) => {
-            if (tempKey) {
-                dispatch(mapChatId({ fromId: tempKey, toId: realId }));
-            }
-            return realId;
-        });
-
-        if (tempKey) {
-            pendingCreations[tempKey] = creationPromise;
-        }
-
-        activeId = await creationPromise;
-        
-        if (tempKey) delete pendingCreations[tempKey];
-      } else {
-        await sendMessageToChat(uid, activeId, { role: 'user', content: message });
-      }
       const context = (history || []).map((msg) => ({ role: msg.role, text: msg.content }));
       const aiResponseObj = await sendMessageToAi(message, userAge, context);
-
+      
+      const currentState = getState().chat;
+      const targetChatId = currentState.idMap[localChatId] || chatId || localChatId;
+      
       dispatch(
         appendMessage({
-          chatId: activeId,
+          chatId: targetChatId,
           message: { role: 'assistant', content: aiResponseObj.text },
         })
       );
-      await sendMessageToChat(uid, activeId, { role: 'assistant', content: aiResponseObj.text });
-
-      return { chatId: activeId, tempChatId: tempChatId };
-
+      
+      dispatch(assistantMessagePersistRequested({ 
+        uid, 
+        chatId: targetChatId, 
+        message: aiResponseObj.text 
+      }));
+      
+      return { 
+        chatId: targetChatId, 
+        tempChatId: tempChatId,
+        localChatId: localChatId
+      };
     } catch (err) {
-      const safeChatId = activeId || chatId || tempChatId;
+      const safeChatId = chatId || localChatId;
       dispatch(
         appendMessage({
           chatId: safeChatId,
@@ -135,7 +85,7 @@ const chatSlice = createSlice({
   initialState: {
     history: [],
     idMap: {},
-    loadingChats: {}, 
+    loadingChats: {},
     deleteStatus: 'idle',
     subscribeStatus: 'idle',
     error: null,
@@ -144,7 +94,6 @@ const chatSlice = createSlice({
     setChatHistory: (state, action) => {
       state.history = action.payload || [];
     },
-
     mapChatId: (state, action) => {
       const { fromId, toId } = action.payload || {};
       if (!fromId || !toId || fromId === toId) return;
@@ -152,20 +101,19 @@ const chatSlice = createSlice({
       state.idMap[fromId] = toId;
       
       if (state.loadingChats[fromId]) {
-        state.loadingChats[toId] = true;
+        state.loadingChats[toId] = state.loadingChats[fromId];
         delete state.loadingChats[fromId];
       }
-
+      
       const localChat = state.history.find(c => c.id === fromId);
       if (localChat) {
-          localChat.id = toId;
+        localChat.id = toId;
       }
     },
-
     upsertChatShell: (state, action) => {
       const chat = action.payload;
       if (!chat?.id) return;
-
+      
       const idx = state.history.findIndex((c) => c.id === chat.id);
       if (idx === -1) {
         state.history.unshift({
@@ -175,78 +123,100 @@ const chatSlice = createSlice({
         });
       }
     },
-
     appendMessage: (state, action) => {
       const { chatId, message } = action.payload || {};
       if (!chatId || !message) return;
-
+      
       const resolvedId = state.idMap[chatId] || chatId;
       const idx = state.history.findIndex((c) => c.id === resolvedId);
+      
       if (idx !== -1) {
         const existing = state.history[idx];
         const msgs = Array.isArray(existing.messages) ? existing.messages : [];
         existing.messages = [...msgs, message];
       }
     },
+    chatDeleted: (state, action) => {
+      const { chatId } = action.payload;
+      state.history = state.history.filter((c) => c.id !== chatId);
+      
+      for (const [tempId, realId] of Object.entries(state.idMap)) {
+        if (realId === chatId || tempId === chatId) delete state.idMap[tempId];
+      }
+    },
+    chatCreationRequested: (state, action) => {
+    },
+    userMessagePersistRequested: (state, action) => {
+    },
+    assistantMessagePersistRequested: (state, action) => {
+    },
+    chatSubscribeRequested: (state, action) => {
+      state.subscribeStatus = 'loading';
+    },
+    chatUnsubscribeRequested: (state, action) => {
+    },
+    chatSubscribeSucceeded: (state) => {
+      state.subscribeStatus = 'succeeded';
+    },
+    chatSubscribeFailed: (state, action) => {
+      state.subscribeStatus = 'failed';
+      state.error = action.payload || 'Failed to subscribe';
+    },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(subscribeToChatsThunk.pending, (state) => {
-        state.subscribeStatus = 'loading';
-        state.error = null;
-      })
       .addCase(subscribeToChatsThunk.fulfilled, (state) => {
-        state.subscribeStatus = 'succeeded';
-      })
-      .addCase(subscribeToChatsThunk.rejected, (state, action) => {
-        state.subscribeStatus = 'failed';
-        state.error = action.payload || action.error?.message || 'Failed to subscribe';
       })
       .addCase(unsubscribeFromChatsThunk.fulfilled, (state) => {
         state.subscribeStatus = 'idle';
       })
-
       .addCase(handleUserMessage.pending, (state, action) => {
         const { chatId, tempChatId } = action.meta.arg;
-        
-        const resolvedChatId = state.idMap[chatId] || chatId;
-        const targetId = resolvedChatId || tempChatId;
+        const targetId = chatId || tempChatId;
         
         if (targetId) {
-            state.loadingChats[targetId] = true;
+          state.loadingChats[targetId] = true;
         }
         state.error = null;
       })
       .addCase(handleUserMessage.fulfilled, (state, action) => {
-        const { chatId, tempChatId } = action.payload;
-        if (chatId) delete state.loadingChats[chatId];
+        const { chatId, tempChatId, localChatId } = action.payload;
+        
+        if (localChatId) delete state.loadingChats[localChatId];
         if (tempChatId) delete state.loadingChats[tempChatId];
+        if (chatId) delete state.loadingChats[chatId];
+        
+        const resolvedId = state.idMap[localChatId] || state.idMap[tempChatId];
+        if (resolvedId) delete state.loadingChats[resolvedId];
       })
       .addCase(handleUserMessage.rejected, (state, action) => {
-        const idToClear = action.payload?.chatId || action.meta.arg.chatId || action.meta.arg.tempChatId;
-        if (idToClear) delete state.loadingChats[idToClear];
+        const { chatId, tempChatId } = action.meta.arg;
+        const idToClear = action.payload?.chatId || chatId || tempChatId;
+        
+        if (idToClear) {
+          delete state.loadingChats[idToClear];
+          const resolvedId = state.idMap[idToClear];
+          if (resolvedId) delete state.loadingChats[resolvedId];
+        }
         
         state.error = action.payload?.message || action.error?.message || 'Failed to send message';
-      })
-
-      .addCase(deleteChatThunk.pending, (state) => {
-        state.deleteStatus = 'loading';
-        state.error = null;
-      })
-      .addCase(deleteChatThunk.fulfilled, (state, action) => {
-        state.deleteStatus = 'succeeded';
-        const deletedId = action.payload;
-        state.history = state.history.filter((c) => c.id !== deletedId);
-        for (const [tempId, realId] of Object.entries(state.idMap)) {
-          if (realId === deletedId || tempId === deletedId) delete state.idMap[tempId];
-        }
-      })
-      .addCase(deleteChatThunk.rejected, (state, action) => {
-        state.deleteStatus = 'failed';
-        state.error = action.payload || action.error?.message || 'Failed to delete chat';
       });
   },
 });
 
-export const { setChatHistory, mapChatId, upsertChatShell, appendMessage } = chatSlice.actions;
+export const {
+  setChatHistory,
+  mapChatId,
+  upsertChatShell,
+  appendMessage,
+  chatDeleted,
+  chatCreationRequested,
+  userMessagePersistRequested,
+  assistantMessagePersistRequested,
+  chatSubscribeRequested,
+  chatUnsubscribeRequested,
+  chatSubscribeSucceeded,
+  chatSubscribeFailed,
+} = chatSlice.actions;
+
 export default chatSlice.reducer;

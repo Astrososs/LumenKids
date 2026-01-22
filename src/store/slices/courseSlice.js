@@ -1,19 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { generateCourseWithAi, refineCourseWithAi, sendMessageToAi } from '../../models/aiModel';
-import {
-  fetchUserCourses,
-  saveCourseToDb,
-  updateUserCourse,
-  deleteUserCourse,
-} from '../../models/courseModel';
 
-export const loadCourses = createAsyncThunk('courses/load', async (uid, { rejectWithValue }) => {
-  try {
-    if (!uid) throw new Error('No UID');
-    return await fetchUserCourses(uid);
-  } catch (e) {
-    return rejectWithValue(e.message);
-  }
+export const loadCourses = createAsyncThunk('courses/load', async (uid) => {
+  return uid;
 });
 
 export const createCourse = createAsyncThunk(
@@ -21,35 +10,24 @@ export const createCourse = createAsyncThunk(
   async ({ uid, topic, age }, { rejectWithValue }) => {
     try {
       const courseData = await generateCourseWithAi(topic, age);
-      
       const timestamp = Date.now();
       courseData.createdAt = new Date().toISOString();
-      
+
       if (courseData.units) {
         courseData.units.forEach((unit, uIdx) => {
           unit.id = `u_${timestamp}_${uIdx}`;
-          
           if (unit.missions) {
             unit.missions.forEach((mission, mIdx) => {
-              mission.id = `m_${timestamp}_${uIdx}_${mIdx}`; 
+              mission.id = `m_${timestamp}_${uIdx}_${mIdx}`;
               if (!mission.tasks) mission.tasks = [];
             });
           }
         });
       }
 
-      return await saveCourseToDb(uid, courseData);
-    } catch (e) {
-      return rejectWithValue(e.message);
-    }
-  }
-);
-
-export const updateCourse = createAsyncThunk(
-  'courses/update',
-  async ({ uid, courseId, courseData }, { rejectWithValue }) => {
-    try {
-      return await updateUserCourse(uid, courseId, courseData);
+      const tempId = `temp_${timestamp}`;
+      courseData.id = tempId;
+      return { uid, courseData };
     } catch (e) {
       return rejectWithValue(e.message);
     }
@@ -58,10 +36,26 @@ export const updateCourse = createAsyncThunk(
 
 export const modifyCourseWithAi = createAsyncThunk(
   'courses/modifyAi',
-  async ({ uid, course, instruction, age }, { rejectWithValue }) => {
+  async ({ uid, course, instruction, age }, { rejectWithValue, dispatch }) => {
     try {
-      const d = await refineCourseWithAi(course, instruction, age);
-      return await updateUserCourse(uid, course.id, d);
+      const updatedData = await refineCourseWithAi(course, instruction, age);
+      const updatedCourse = { ...updatedData, id: course.id };
+      
+      dispatch(courseUpdated({ uid, courseId: course.id, courseData: updatedCourse }));
+      
+      return { uid, courseId: course.id, courseData: updatedCourse };
+    } catch (e) {
+      return rejectWithValue(e.message);
+    }
+  }
+);
+
+export const updateCourse = createAsyncThunk(
+  'courses/update',
+  async ({ uid, courseId, courseData }, { dispatch, rejectWithValue }) => {
+    try {
+      dispatch(courseUpdated({ uid, courseId, courseData }));
+      return { uid, courseId, courseData };
     } catch (e) {
       return rejectWithValue(e.message);
     }
@@ -70,10 +64,10 @@ export const modifyCourseWithAi = createAsyncThunk(
 
 export const deleteCourse = createAsyncThunk(
   'courses/delete',
-  async ({ uid, courseId }, { rejectWithValue }) => {
+  async ({ uid, courseId }, { dispatch, rejectWithValue }) => {
     try {
-      await deleteUserCourse(uid, courseId);
-      return courseId;
+      dispatch(courseDeleted({ uid, courseId }));
+      return { courseId };
     } catch (e) {
       return rejectWithValue(e.message);
     }
@@ -85,14 +79,27 @@ export const loadActiveCourse = createAsyncThunk(
   async ({ uid, courseId }, { getState, dispatch, rejectWithValue }) => {
     try {
       let { list } = getState().courses;
+      
       if (!list || list.length === 0) {
-        const action = await dispatch(loadCourses(uid));
-        if (loadCourses.fulfilled.match(action)) list = action.payload;
-        else throw new Error('Failed to restore courses');
+        dispatch(loadCourses(uid));
+        
+        for (let i = 0; i < 20; i++) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          const newState = getState();
+          if (newState.courses.list.length > 0) {
+            break;
+          }
+        }
+        
+        list = getState().courses.list;
       }
 
       const course = list.find((c) => c.id === courseId);
-      if (!course) throw new Error('Course not found');
+      
+      if (!course) {
+        throw new Error('Course not found');
+      }
+      
       return course;
     } catch (e) {
       return rejectWithValue(e.message);
@@ -105,10 +112,19 @@ export const loadActiveMission = createAsyncThunk(
   async ({ uid, missionId }, { getState, dispatch, rejectWithValue }) => {
     try {
       let { list } = getState().courses;
+      
       if (!list || list.length === 0) {
-        const action = await dispatch(loadCourses(uid));
-        if (loadCourses.fulfilled.match(action)) list = action.payload;
-        else throw new Error('Failed to restore courses');
+        dispatch(loadCourses(uid));
+        
+        for (let i = 0; i < 20; i++) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          const newState = getState();
+          if (newState.courses.list.length > 0) {
+            break;
+          }
+        }
+        
+        list = getState().courses.list;
       }
 
       for (const course of list) {
@@ -116,10 +132,12 @@ export const loadActiveMission = createAsyncThunk(
         for (const unit of course.units) {
           if (!unit.missions) continue;
           const mission = unit.missions.find((m) => m.id === missionId);
-          if (mission) return { ...mission, unitId: unit.id, courseId: course.id };
+          if (mission) {
+            return { ...mission, unitId: unit.id, courseId: course.id };
+          }
         }
       }
-
+      
       throw new Error('Mission not found');
     } catch (e) {
       return rejectWithValue(e.message);
@@ -146,11 +164,54 @@ const courseSlice = createSlice({
     activeCourse: null,
     activeMission: null,
     aiHelp: '',
-    aiHelpStatus: 'idle', 
+    aiHelpStatus: 'idle',
     loading: false,
     error: null,
   },
   reducers: {
+    coursesLoaded: (state, action) => {
+      state.list = action.payload;
+      state.loading = false;
+    },
+    courseAdded: (state, action) => {
+      const { courseData } = action.payload;
+      const exists = state.list.find(c => c.id === courseData.id);
+      if (!exists) {
+        state.list.push(courseData);
+      }
+      state.loading = false;
+    },
+    courseUpdated: (state, action) => {
+      const { courseId, courseData } = action.payload;
+      const idx = state.list.findIndex((c) => c.id === courseId);
+      
+      if (idx !== -1) {
+        state.list[idx] = { ...state.list[idx], ...courseData };
+      }
+      
+      if (state.activeCourse?.id === courseId) {
+        state.activeCourse = { ...state.activeCourse, ...courseData };
+      }
+      
+      state.loading = false;
+    },
+    courseIdReplaced: (state, action) => {
+      const { oldId, newId, courseData } = action.payload;
+      const idx = state.list.findIndex((c) => c.id === oldId);
+      
+      if (idx !== -1) {
+        state.list.splice(idx, 1);
+        state.list.push({ ...courseData, id: newId });
+      }
+      
+      state.loading = false;
+    },
+    courseDeleted: (state, action) => {
+      const { courseId } = action.payload;
+      state.list = state.list.filter((c) => c.id !== courseId);
+      if (state.activeCourse?.id === courseId) state.activeCourse = null;
+      state.loading = false;
+    },
     setActiveCourse: (state, action) => {
       state.activeCourse = state.list.find((c) => c.id === action.payload) || null;
     },
@@ -167,38 +228,84 @@ const courseSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(loadCourses.fulfilled, (state, action) => {
-        state.list = action.payload;
+      .addCase(loadCourses.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(loadCourses.fulfilled, (state) => {
         state.loading = false;
+      })
+      .addCase(loadCourses.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || 'Failed to load courses';
+      })
+      .addCase(createCourse.pending, (state) => {
+        state.loading = true;
+        state.error = null;
       })
       .addCase(createCourse.fulfilled, (state, action) => {
-        state.list.push(action.payload);
         state.loading = false;
       })
-      .addCase(updateCourse.fulfilled, (state, action) => {
-        const idx = state.list.findIndex((c) => c.id === action.payload.id);
-        if (idx !== -1) state.list[idx] = action.payload;
-        state.activeCourse = action.payload;
+      .addCase(createCourse.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || 'Failed to create course';
+      })
+      .addCase(modifyCourseWithAi.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(modifyCourseWithAi.fulfilled, (state) => {
         state.loading = false;
       })
-      .addCase(modifyCourseWithAi.fulfilled, (state, action) => {
-        const idx = state.list.findIndex((c) => c.id === action.payload.id);
-        if (idx !== -1) state.list[idx] = action.payload;
-        state.activeCourse = action.payload;
+      .addCase(modifyCourseWithAi.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || 'Failed to modify course';
+      })
+      .addCase(updateCourse.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateCourse.fulfilled, (state) => {
         state.loading = false;
       })
-      .addCase(deleteCourse.fulfilled, (state, action) => {
-        state.list = state.list.filter((c) => c.id !== action.payload);
-        if (state.activeCourse?.id === action.payload) state.activeCourse = null;
+      .addCase(updateCourse.rejected, (state, action) => {
         state.loading = false;
+        state.error = action.payload || 'Failed to update course';
+      })
+      .addCase(deleteCourse.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteCourse.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(deleteCourse.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || 'Failed to delete course';
+      })
+      .addCase(loadActiveCourse.pending, (state) => {
+        state.loading = true;
+        state.error = null;
       })
       .addCase(loadActiveCourse.fulfilled, (state, action) => {
         state.activeCourse = action.payload;
         state.loading = false;
       })
+      .addCase(loadActiveCourse.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || 'Failed to load course';
+      })
+      .addCase(loadActiveMission.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(loadActiveMission.fulfilled, (state, action) => {
         state.activeMission = action.payload;
         state.loading = false;
+      })
+      .addCase(loadActiveMission.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || 'Failed to load mission';
       })
       .addCase(askLumenHelp.pending, (state) => {
         state.aiHelpStatus = 'loading';
@@ -211,30 +318,19 @@ const courseSlice = createSlice({
       .addCase(askLumenHelp.rejected, (state, action) => {
         state.aiHelpStatus = 'failed';
         state.aiHelp = action.payload || 'Oops! My brain froze. Try again later! 🧊';
-      })
-      .addMatcher(
-        (action) => action.type.endsWith('/pending') && action.type !== askLumenHelp.pending.type,
-        (state) => {
-          state.loading = true;
-          state.error = null;
-        }
-      )
-      .addMatcher(
-        (action) =>
-          action.type.endsWith('/fulfilled') && action.type !== askLumenHelp.fulfilled.type,
-        (state) => {
-          state.loading = false;
-        }
-      )
-      .addMatcher(
-        (action) => action.type.endsWith('/rejected') && action.type !== askLumenHelp.rejected.type,
-        (state, action) => {
-          state.loading = false;
-          state.error = action.payload || action.error?.message || 'Something went wrong';
-        }
-      );
+      });
   },
 });
 
-export const { setActiveCourse, clearActiveMission, clearAiHelp } = courseSlice.actions;
+export const {
+  coursesLoaded,
+  courseAdded,
+  courseUpdated,
+  courseIdReplaced,
+  courseDeleted,
+  setActiveCourse,
+  clearActiveMission,
+  clearAiHelp,
+} = courseSlice.actions;
+
 export default courseSlice.reducer;

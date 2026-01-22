@@ -3,8 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useDispatch, useSelector } from 'react-redux';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase/firebaseConfig';
-import { loginSuccess, logout, setLoading } from './store/slices/userSlice';
-import { getUserProfile } from './models/userModel';
+import {logout, setLoading, loadUserProfile } from './store/slices/userSlice';
 
 import LoginPresenter from './presenters/LoginPresenter';
 import CoursesPresenter from './presenters/CoursesPresenter'; 
@@ -23,14 +22,11 @@ function AppContent() {
     dispatch(setLoading(true));
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
-        const profile = await getUserProfile(currentUser.uid);
-        if (profile) {
-          dispatch(loginSuccess(profile));
-        }
+        dispatch(loadUserProfile(currentUser.uid));
       } else {
         dispatch(logout());
+        dispatch(setLoading(false));
       }
-      dispatch(setLoading(false));
     });
     return () => unsubscribe();
   }, [dispatch]);
